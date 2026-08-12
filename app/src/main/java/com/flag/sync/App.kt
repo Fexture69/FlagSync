@@ -334,12 +334,9 @@ fun FlagSyncApp(mainViewModel: MainViewModel = viewModel()) {
                                     if (mainViewModel.mappingUpdateAvailable) {
                                         mainViewModel.showUpdateDialog = true
                                     } else {
-                                        Toast.makeText(context, context.getString(R.string.settings_updating_mapping), Toast.LENGTH_SHORT).show()
                                         mainViewModel.checkMappingUpdate(context.applicationContext) { available ->
                                             if (available) {
                                                 mainViewModel.showUpdateDialog = true
-                                            } else {
-                                                Toast.makeText(context, context.getString(R.string.compare_update_no_updates), Toast.LENGTH_SHORT).show()
                                             }
                                         }
                                     }
@@ -360,12 +357,9 @@ fun FlagSyncApp(mainViewModel: MainViewModel = viewModel()) {
                                     if (mainViewModel.appUpdateInfo != null) {
                                         mainViewModel.showAppUpdateDialog = true
                                     } else {
-                                        Toast.makeText(context, context.getString(R.string.settings_updating_mapping), Toast.LENGTH_SHORT).show()
                                         mainViewModel.checkAppUpdate(context.applicationContext) { available ->
                                             if (available) {
                                                 mainViewModel.showAppUpdateDialog = true
-                                            } else {
-                                                Toast.makeText(context, context.getString(R.string.settings_app_update_no_updates), Toast.LENGTH_SHORT).show()
                                             }
                                         }
                                     }
@@ -425,9 +419,11 @@ fun FlagSyncApp(mainViewModel: MainViewModel = viewModel()) {
                                 isCheckingUpdate = mainViewModel.isCheckingUpdate,
                                 isUpdatingMapping = mainViewModel.isUpdatingMapping,
                                 onManualUpdateCheck = onManualUpdateCheckS,
+                                mappingUpToDate = mainViewModel.mappingUpToDate,
                                 autoCheckAppUpdates = autoCheckAppUpdates,
                                 onAutoCheckAppUpdatesChange = onAutoCheckAppUpdatesChangeS,
                                 isCheckingAppUpdate = mainViewModel.isCheckingAppUpdate,
+                                appUpToDate = mainViewModel.appUpToDate,
                                 appUpdateAvailable = mainViewModel.appUpdateInfo != null,
                                 onManualAppUpdateCheck = onManualAppUpdateCheckS,
                                 isAmoledMode = isAmoledMode,

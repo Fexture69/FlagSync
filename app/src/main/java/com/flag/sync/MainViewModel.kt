@@ -51,6 +51,12 @@ class MainViewModel : ViewModel() {
     var showUpdateDialog by mutableStateOf(false)
     var showAppUpdateDialog by mutableStateOf(false)
 
+    var mappingUpToDate by mutableStateOf(false)
+    var appUpToDate by mutableStateOf(false)
+
+    private var mappingNoticeJob: Job? = null
+    private var appNoticeJob: Job? = null
+
     // Validation errors (in the VM to survive UI theme recreations)
     var errorA by mutableStateOf<String?>(null)
         private set
@@ -106,11 +112,22 @@ class MainViewModel : ViewModel() {
     fun checkMappingUpdate(context: android.content.Context, onComplete: ((Boolean) -> Unit)? = null) {
         if (isCheckingUpdate) return
         isCheckingUpdate = true
+        mappingUpToDate = false
         viewModelScope.launch {
             val result = FlagMapperProvider.checkForUpdate(context)
             val available = result.getOrNull() ?: mappingUpdateAvailable
             mappingUpdateAvailable = available
             isCheckingUpdate = false
+            
+            if (!available && onComplete != null) {
+                mappingUpToDate = true
+                mappingNoticeJob?.cancel()
+                mappingNoticeJob = viewModelScope.launch {
+                    delay(3000)
+                    mappingUpToDate = false
+                }
+            }
+            
             onComplete?.invoke(available)
         }
     }
@@ -155,11 +172,22 @@ class MainViewModel : ViewModel() {
     fun checkAppUpdate(context: android.content.Context, onComplete: ((Boolean) -> Unit)? = null) {
         if (isCheckingAppUpdate) return
         isCheckingAppUpdate = true
+        appUpToDate = false
         viewModelScope.launch {
             val result = AppUpdateProvider.checkForUpdate(context)
             val info = result.getOrNull()
             appUpdateInfo = info
             isCheckingAppUpdate = false
+
+            if (info == null && onComplete != null) {
+                appUpToDate = true
+                appNoticeJob?.cancel()
+                appNoticeJob = viewModelScope.launch {
+                    delay(3000)
+                    appUpToDate = false
+                }
+            }
+
             onComplete?.invoke(info != null)
         }
     }

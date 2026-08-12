@@ -19,7 +19,7 @@ object FlagMapperProvider {
 
     private const val MAPPING_FILENAME = "id_name_mapping.json"
     private const val MAPPING_ASSET_PATH = "mappings/$MAPPING_FILENAME"
-    private const val MAPPING_URL = "https://raw.githubusercontent.com/ViictorNunes/FlagSync/main/app/src/main/assets/mappings/id_name_mapping.json"
+    private const val MAPPING_URL = "https://raw.githubusercontent.com/ViictorNunes/FlagSync/master/app/src/main/assets/mappings/id_name_mapping.json"
     private const val PREFS_NAME = "flag_sync_mapping_prefs"
     private const val KEY_ETAG = "mapping_etag"
 

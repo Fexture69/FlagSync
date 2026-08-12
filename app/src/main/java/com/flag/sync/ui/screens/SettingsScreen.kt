@@ -83,9 +83,11 @@ fun SettingsScreen(
     autoCheckAppUpdates: Boolean = true,
     onAutoCheckAppUpdatesChange: (Boolean) -> Unit = {},
     isCheckingAppUpdate: Boolean = false,
+    appUpToDate: Boolean = false,
     onManualAppUpdateCheck: () -> Unit = {},
     appUpdateAvailable: Boolean = false,
     onManualUpdateCheck: () -> Unit = {},
+    mappingUpToDate: Boolean = false,
     isAmoledMode: Boolean = false,
     onAmoledModeChange: (Boolean) -> Unit = {},
     useCustomPicker: Boolean = false,
@@ -330,6 +332,7 @@ fun SettingsScreen(
                     val btnTitle = when {
                         isUpdatingMapping || isCheckingUpdate -> stringResource(R.string.settings_updating_mapping)
                         mappingUpdateAvailable -> stringResource(R.string.compare_update_available_btn)
+                        mappingUpToDate -> stringResource(R.string.compare_update_no_updates)
                         else -> stringResource(R.string.compare_check_updates_btn)
                     }
 
@@ -365,6 +368,7 @@ fun SettingsScreen(
                     val btnTitle = when {
                         isCheckingAppUpdate -> stringResource(R.string.settings_updating_mapping)
                         appUpdateAvailable -> stringResource(R.string.settings_app_update_available_btn)
+                        appUpToDate -> stringResource(R.string.settings_app_update_no_updates)
                         else -> stringResource(R.string.settings_check_app_updates_btn)
                     }
 
