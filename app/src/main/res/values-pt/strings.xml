@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Flag Sync</string>
+
+    <!-- Navigation -->
+    <string name="nav_compare">Comparar</string>
+    <string name="nav_converter">Converter</string>
+    <string name="nav_settings">Ajustes</string>
+
+    <!-- Compare Screen -->
+    <string name="compare_eyebrow">comparar &amp; sincronizar</string>
+    <string name="compare_title">Comparar e verificar backups</string>
+    <string name="compare_description">Compare, sincronize e verifique seus backups. Tudo roda no seu celular.</string>
+    <string name="compare_mode_two_files">Comparar backups</string>
+    <string name="compare_mode_double_file">Verificar dois backups</string>
+    <string name="compare_mode_single_file">Verificar um backup</string>
+
+    <string name="compare_step_upload">1 · CARREGUE OS ARQUIVOS JSON</string>
+    <string name="compare_backup_a" translatable="false">Backup A</string>
+    <string name="compare_backup_b" translatable="false">Backup B</string>
+    <string name="compare_mapping_label">Mapeamento</string>
+    <string name="compare_mapping_active">Mapeamento externo ativo ( %1$d flags )</string>
+    <string name="compare_mapping_default_active">Mapeamento padrão ativo ( %1$d flags )</string>
+    <string name="compare_mapping_hint" translatable="false">id_name_mapping.json</string>
+    <string name="compare_step_results">2 · VEJA AS DIFERENÇAS</string>
+    <string name="compare_stats_total_a">flags em A</string>
+    <string name="compare_stats_total_b">flags em B</string>
+    <string name="compare_stats_only_a">só em A</string>
+    <string name="compare_stats_only_b">só em B</string>
+    <string name="compare_stats_moved_to_a">movidas p/ A</string>
+    <string name="compare_stats_moved_to_b">movidas p/ B</string>
+    <string name="compare_stats_edited_a">editadas em A</string>
+    <string name="compare_stats_edited_b">editadas em B</string>
+    <string name="compare_section_only_a">Só no arquivo A</string>
+    <string name="compare_section_only_a_desc">Existem no arquivo A e faltam no B.</string>
+    <string name="compare_section_only_b">Só no arquivo B</string>
+    <string name="compare_section_only_b_desc">Existem no arquivo B e faltam no A.</string>
+    <string name="compare_section_diffs">Mesma flag, valores diferentes</string>
+    <string name="compare_action_copy_all_to_b">Copiar todas p/ B</string>
+    <string name="compare_action_copy_all_to_a">Copiar todas p/ A</string>
+    <string name="compare_download_a">Baixar A atualizado</string>
+    <string name="compare_download_b">Baixar B atualizado</string>
+    <string name="compare_all_flags">Todas as flags encontradas</string>
+    <string name="compare_moved_title">Flags movidas para %1$s</string>
+    <string name="compare_stats_deleted_a">excluídas de A</string>
+    <string name="compare_stats_deleted_b">excluídas de B</string>
+    <string name="compare_deleted_title">Flags excluídas de %1$s</string>
+    <string name="compare_action_remove_all">Desfazer todas</string>
+    <string name="compare_action_restore_all">Restaurar todas</string>
+
+    <!-- Converter Screen -->
+    <string name="converter_eyebrow">converter</string>
+    <string name="converter_title">Converter .ibackup → .json</string>
+    <string name="converter_description">Carregue um arquivo de backup (.ibackup) e converta pra JSON, pronto pra comparar.</string>
+    <string name="converter_step_upload">1 · CARREGUE O ARQUIVO DE BACKUP</string>
+    <string name="converter_backup_label">Arquivo de backup</string>
+    <string name="converter_note_label">Nota da conversão (será incluída no JSON)</string>
+    <string name="converter_note_placeholder">Nota opcional (ex: extraído do iPhone em 14/07)</string>
+    <string name="converter_preview_title">Prévia do resultado</string>
+    <string name="converter_download_btn">Baixar backup convertido</string>
+    <string name="converter_status_reading">lendo arquivo…</string>
+    <string name="converter_status_success">convertido com sucesso</string>
+    <string name="converter_status_not_recognized">não reconhecido</string>
+    <string name="converter_status_failed">falha na leitura</string>
+    <string name="converter_legal_warning">Qualquer arquivo .ibackup convertido é para uso estritamente pessoal. É proibido passar-se pelo criador original do backup. Os criadores do aplicativo não irão se responsabilizar pelo mal uso do recurso.</string>
+    <string name="converter_error_bplist">Este arquivo é um plist BINÁRIO (bplist) e não pode ser lido diretamente.</string>
+    <string name="converter_error_xml">Não consegui interpretar o plist XML: %1$s</string>
+    <string name="converter_error_generic">Não consegui converter \"%1$s\".</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_eyebrow">preferências</string>
+    <string name="settings_title">Configurações</string>
+    <string name="settings_description">Ajustes gerais do app.</string>
+    <string name="settings_theme_label">TEMA DO APLICATIVO</string>
+    <string name="settings_palette_label">PALETA DE CORES</string>
+    <string name="palette_default">Padrão</string>
+    <string name="palette_vibrant">Vibrante</string>
+    <string name="palette_deep">Profundo</string>
+    <string name="palette_monochrome">Monocromático</string>
+    <string name="palette_custom">Personalizado</string>
+    <string name="palette_material_you">Material You</string>
+    <string name="settings_app_label">APP</string>
+    <string name="settings_custom_color_title">Escolha sua cor</string>
+    <string name="settings_custom_color_warning">Aviso: Esta cor pode dificultar a leitura de alguns textos e elementos.</string>
+    <string name="settings_language_label">IDIOMA DO APLICATIVO</string>
+    <string name="settings_confirm_delete_title">Confirmar antes de apagar</string>
+    <string name="settings_confirm_delete_subtitle">Exibir aviso de segurança antes de remover definitivamente uma flag do backup para evitar perdas acidentais.</string>
+    <string name="settings_update_mapping_title">Atualizar Mapeamento</string>
+    <string name="settings_updating_mapping">Atualizando…</string>
+    <string name="settings_update_mapping_success">Mapeamento atualizado! %1$d flags carregadas.</string>
+    <string name="settings_update_mapping_error">Falha ao atualizar: %1$s</string>
+    <string name="settings_auto_check_updates_title">Atualizar mapeamento automaticamente</string>
+    <string name="settings_auto_check_updates_subtitle">Procurar por novas definições de flags (mapping) ao abrir o aplicativo.</string>
+    <string name="compare_check_updates_btn">Verificar atualização manualmente</string>
+    <string name="compare_update_available_btn">Novo Mapeamento Disponível! Atualizar Agora</string>
+    <string name="compare_update_no_updates">O mapeamento já está atualizado.</string>
+    <string name="settings_update_dialog_title">Atualizar Mapeamento</string>
+    <string name="settings_update_dialog_message">Uma nova versão das definições de flags está disponível. O aplicativo será reiniciado automaticamente após o download.</string>
+    <string name="settings_update_dialog_confirm">Atualizar e Reiniciar</string>
+    <string name="settings_restart_tour_title">Reiniciar tour de recursos</string>
+    <string name="settings_restart_tour_subtitle">Exibir o tour de introdução novamente.</string>
+    <string name="settings_community_label">COMUNIDADE</string>
+    <string name="settings_telegram_title">Catálogo de Flags do Instagram</string>
+    <string name="settings_telegram_subtitle">Visite a biblioteca de flags e dicas para o Instagram.</string>
+    <string name="settings_github_title">Projeto no GitHub</string>
+    <string name="settings_github_subtitle">Veja o código-fonte e contribua com o projeto.</string>
+    <string name="settings_auto_rename_title">Renomear para mc_overrides</string>
+    <string name="settings_auto_rename_subtitle">Sempre renomear backups atualizados ou convertidos para \'mc_overrides.json\' para facilitar a aplicação.</string>
+    <string name="settings_auto_check_app_updates_title">Atualizar app automaticamente</string>
+    <string name="settings_auto_check_app_updates_subtitle">Verificar novas versões do aplicativo automaticamente ao iniciar.</string>
+    <string name="settings_check_app_updates_btn">Verificar atualização do app manualmente</string>
+    <string name="settings_app_update_available_btn">Nova Versão do App Disponível! Atualizar Agora</string>
+    <string name="settings_app_update_no_updates">O aplicativo já está na versão mais recente.</string>
+    <string name="settings_app_update_dialog_title">Atualização do Aplicativo</string>
+    <string name="settings_app_update_dialog_message">Uma nova versão do Flag Sync está disponível (%1$s). Deseja baixar agora?</string>
+    <string name="settings_app_update_dialog_confirm">Baixar Atualização</string>
+    <string name="settings_amoled_title">Modo AMOLED</string>
+    <string name="settings_amoled_subtitle">Usar fundo preto puro para maior economia de bateria em telas AMOLED.</string>
+    <string name="settings_custom_picker_title">Seletor Interno</string>
+    <string name="settings_custom_picker_subtitle">Usar o navegador de arquivos personalizado do app em vez do seletor do sistema Android.</string>
+    <string name="settings_picker_permission_title">Permissão de Arquivos</string>
+    <string name="settings_picker_permission_message">O Seletor Interno precisa de acesso total ao armazenamento para navegar em pastas e encontrar seus backups. Você será levado às configurações do sistema para autorizar o Flag Sync.</string>
+    <string name="settings_picker_permission_confirm">Continuar</string>
+    <string name="settings_lang_system">Sistema</string>
+    <string name="settings_lang_pt" translatable="false">Português</string>
+    <string name="settings_lang_en" translatable="false">English</string>
+    <string name="settings_lang_es" translatable="false">Español</string>
+    <string name="settings_policy_violation">Devido às políticas do app, esta opção não pode ser desativada.</string>
+    <string name="settings_secret_unlocked">Modo debug ativado</string>
+    <string name="settings_secret_locked">Modo debug desativado</string>
+
+    <!-- Components -->
+    <string name="upload_tap_to_choose">Toque para escolher</string>
+    <string name="upload_remove_file">Remover arquivo</string>
+    <string name="upload_restore_mapping">Restaurar mapping padrão</string>
+    <string name="upload_error_not_backup">NÃO É UM BACKUP</string>
+    <string name="result_copy_name">Copiar nome</string>
+    <string name="result_push_other">Copiar para o outro lado</string>
+    <string name="result_collapse">Recolher</string>
+    <string name="result_expand_values">%1$d valores</string>
+    <string name="result_see_all">Ver todos os valores</string>
+    <string name="result_edited_label">EDITADO</string>
+    <string name="compare_search_placeholder">Pesquisar por flags relacionado(a) a</string>
+    <string name="compare_group_by_area">Agrupar por Categoria</string>
+    <string name="category_general">Geral</string>
+    <string name="search_scope_flags">Flags</string>
+    <string name="search_scope_subflags">Subflags</string>
+
+    <!-- Themes -->
+    <string name="theme_light">Claro</string>
+    <string name="theme_dark">Escuro</string>
+    <string name="theme_amoled">AMOLED</string>
+    <string name="theme_material_you">Material You</string>
+
+    <!-- Errors -->
+    <string name="error_mapping_as_backup">Este arquivo parece um Mapping (lista). Escolha um Backup (objeto).</string>
+    <string name="error_generic">Ocorreu um erro inesperado.</string>
+    <string name="error_file_already_loaded">Já existe um arquivo carregado. Remova-o antes de escolher outro.</string>
+    <string name="error_invalid_extension">Extensão inválida. Esperado:</string>
+    <string name="error_reading_mapping">Erro ao ler mapa: %1$s</string>
+    <string name="delete_confirm_title">Confirmar antes de apagar</string>
+    <string name="delete_confirm_message">Exibir aviso de segurança antes de remover definitivamente uma flag do backup para evitar perdas acidentais.</string>
+    <string name="delete_confirm_action">Excluir</string>
+    <string name="delete_confirm_cancel">Cancelar</string>
+    <string name="delete_dont_show_again">Não perguntar novamente</string>
+    <string name="delete_subflag_confirm_title">Remover Subflag?</string>
+    <string name="delete_subflag_confirm_message">Tem certeza que deseja remover esta subflag? Esta alteração será salva no seu backup.</string>
+    <string name="edit_dialog_title">Editar Flag</string>
+    <string name="edit_dialog_save">Salvar</string>
+    <string name="edit_dialog_edited_title">Flags Editadas (%1$s)</string>
+    <string name="edit_dialog_no_edits">Nenhuma flag editada ainda.</string>
+    <string name="edit_dialog_restore_all">Restaurar Tudo</string>
+    <string name="edit_dialog_revert_flag">Desfazer edições</string>
+    <string name="revert_category">Reverter categoria para o padrão</string>
+    <string name="edit_dialog_removed_subflags">Subflags removidas:</string>
+    <string name="edit_dialog_removed_section_title">Removidos (%1$d)</string>
+    <string name="edit_dialog_restore_subflag">Restaurar subflag</string>
+    <string name="edit_dialog_cancel">Cancelar</string>
+    <string name="edit_dialog_enabled">ATIVADO</string>
+    <string name="edit_dialog_disabled">DESATIVADO</string>
+    <string name="edit_dialog_subflags_label">Subflags (%1$d)</string>
+    <string name="edit_dialog_remove_subflag">Remover subflag</string>
+    <string name="edit_dialog_value_label">Valor</string>
+    <string name="edit_dialog_current_value">Valor atual: %1$s</string>
+    <string name="edit_action_description">Editar flag</string>
+    <string name="delete_action_description">Excluir flag</string>
+    <string name="copy_toast_success">Copiado!</string>
+    <string name="compare_action_changelog">Criar Changelog</string>
+    <string name="changelog_title">Changelog de Alterações</string>
+    <string name="changelog_status_added">Adicionado</string>
+    <string name="changelog_status_removed">Removido</string>
+    <string name="changelog_status_enabled">Ativado</string>
+    <string name="changelog_status_disabled">Desativado</string>
+    <string name="changelog_status_modified">Modificado</string>
+    <string name="changelog_copy">Copiar</string>
+    <string name="changelog_unmapped_warning">Existem %1$d flags novas que não estão no mapeamento. Recomendamos adicionar um mapeamento (mapping) mais recente.</string>
+    <string name="warning_high_flag_count">Backups com muitas flags (>800) podem causar lentidão no aplicativo.</string>
+
+    <!-- Feature Tour -->
+    <string name="tour_welcome_title">Bem-vindo ao Flag Sync!</string>
+    <string name="tour_welcome_desc">A ferramenta definitiva para gerenciar Feature Flags com alta performance e exportações limpas.</string>
+    <string name="tour_compare_title">Comparação Poderosa</string>
+    <string name="tour_compare_desc">Veja diferenças instantâneas com agrupamento por categorias e sincronização em tempo real entre backups.</string>
+    <string name="tour_drag_title">Navegação Fluida</string>
+    <string name="tour_drag_desc">Deslize a pílula inferior para alternar telas. Sinta as animações ultra-estáveis.</string>
+    <string name="tour_convert_title">Conversor Instantâneo</string>
+    <string name="tour_convert_desc">Transforme .ibackup em JSON limpo com um toque. Rápido, seguro e pronto para comparar.</string>
+    <string name="tour_settings_title">Estilo e Atualizações</string>
+    <string name="tour_settings_desc">Curta as cores dinâmicas do Material You e mantenha o app e o mapeamento sempre em dia com o novo sistema de atualização automática.</string>
+    <string name="tour_next">Próximo</string>
+    <string name="tour_finish">Entendi!</string>
+    <string name="file_picker_internal_storage">Armazenamento Interno</string>
+    <string name="file_picker_sd_card">Cartão SD</string>
+    <string name="file_picker_parent_dir">Diretório Anterior</string>
+    <string name="file_picker_no_files">Nenhum arquivo encontrado aqui.</string>
+    <string name="file_picker_no_results">Nenhum resultado encontrado</string>
+    <string name="file_picker_permission_denied">Permissão negada. Conceda acesso ao armazenamento para navegar.</string>
+    <string name="file_picker_select_file">Selecionar Arquivo</string>
+    <string name="file_picker_select_folder">Selecionar Pasta</string>
+    <string name="file_picker_save_backup">Salvar Backup</string>
+    <string name="file_picker_filename_label">Nome do arquivo:</string>
+    <string name="file_picker_save_button">Salvar</string>
+    <string name="file_picker_overwrite_title">Substituir arquivo?</string>
+    <string name="file_picker_overwrite_message">O arquivo \"%1$s\" já existe nesta pasta. Deseja substituí-lo?</string>
+    <string name="file_picker_overwrite_confirm">Substituir</string>
+    <string name="file_picker_search_hint">Pesquisar na pasta atual…</string>
+</resources>
