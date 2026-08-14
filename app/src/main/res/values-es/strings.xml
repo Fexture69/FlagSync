@@ -2,12 +2,12 @@
 <resources>
     <string name="app_name" translatable="false">Flag Sync</string>
 
-    <!-- Navigation -->
+    <!-- Navegación -->
     <string name="nav_compare">Comparar</string>
     <string name="nav_converter">Convertir</string>
     <string name="nav_settings">Ajustes</string>
 
-    <!-- Compare Screen -->
+    <!-- Pantalla de Comparación -->
     <string name="compare_eyebrow">comparar &amp; sincronizar</string>
     <string name="compare_title">Comparar y verificar backups</string>
     <string name="compare_description">Compare, sincronice y verifique sus backups. Todo funciona en su celular.</string>
@@ -48,7 +48,7 @@
     <string name="compare_action_remove_all">Deshacer todas</string>
     <string name="compare_action_restore_all">Restaurar todas</string>
 
-    <!-- Converter Screen -->
+    <!-- Pantalla del Convertidor -->
     <string name="converter_eyebrow">convertir</string>
     <string name="converter_title">Convertir .ibackup → .json</string>
     <string name="converter_description">Cargue un archivo de backup (.ibackup) y conviértalo a JSON, listo para comparar.</string>
@@ -67,7 +67,7 @@
     <string name="converter_error_xml">No se pudo interpretar el plist XML: %1$s</string>
     <string name="converter_error_generic">No se pudo convertir \"%1$s\".</string>
 
-    <!-- Settings Screen -->
+    <!-- Pantalla de Ajustes -->
     <string name="settings_eyebrow">preferencias</string>
     <string name="settings_title">Configuraciones</string>
     <string name="settings_description">Ajustes generales de la aplicación.</string>
@@ -129,7 +129,7 @@
     <string name="settings_secret_unlocked">Modo de depuración activado</string>
     <string name="settings_secret_locked">Modo de depuración desactivado</string>
 
-    <!-- Components -->
+    <!-- Componentes -->
     <string name="upload_tap_to_choose">Tocar para elegir</string>
     <string name="upload_remove_file">Eliminar archivo</string>
     <string name="upload_restore_mapping">Restaurar mapeo predeterminado</string>
@@ -146,14 +146,14 @@
     <string name="search_scope_flags">Flags</string>
     <string name="search_scope_subflags">Subflags</string>
 
-    <!-- Themes -->
+    <!-- Temas -->
     <string name="theme_light">Claro</string>
     <string name="theme_dark">Oscuro</string>
     <string name="theme_amoled">AMOLED</string>
     <string name="theme_material_you">Material You</string>
 
-    <!-- Errors -->
-    <string name="error_mapping_as_backup">Este archivo parece un Mapeo (lista). Elija un Backup (objeto).</string>
+    <!-- Errores -->
+    <string name="error_mapping_as_backup">Este archivo parece un Mapeo. Elija un Backup.</string>
     <string name="error_generic">Ocurrió un error inesperado.</string>
     <string name="error_file_already_loaded">Ya existe un archivo cargado. Elimínelo antes de elegir otro.</string>
     <string name="error_invalid_extension">Extensión inválida. Esperado:</string>
@@ -196,7 +196,7 @@
     <string name="changelog_unmapped_warning">Existen %1$d flags nuevas que no están en el mapeo. Recomendamos añadir un mapeo (mapping) más reciente.</string>
     <string name="warning_high_flag_count">Copias de seguridad con muchas flags (>800) pueden causar lentitud en la aplicación.</string>
 
-    <!-- Feature Tour -->
+    <!-- Tour de Funciones -->
     <string name="tour_welcome_title">¡Bienvenido a Flag Sync!</string>
     <string name="tour_welcome_desc">La herramienta definitiva para gestionar Feature Flags con alto rendimiento y exportaciones limpias.</string>
     <string name="tour_compare_title">Comparación Poderosa</string>

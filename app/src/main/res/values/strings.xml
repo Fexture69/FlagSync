@@ -152,7 +152,7 @@
     <string name="theme_material_you">Material You</string>
 
     <!-- Errors -->
-    <string name="error_mapping_as_backup">This file looks like a Mapping (list). Choose a Backup (object).</string>
+    <string name="error_mapping_as_backup">This file looks like a Mapping. Choose a Backup.</string>
     <string name="error_generic">An unexpected error occurred.</string>
     <string name="error_file_already_loaded">A file is already loaded. Please remove it before choosing another.</string>
     <string name="error_invalid_extension">Invalid extension. Expected:</string>
