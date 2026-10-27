@@ -49,6 +49,7 @@ import com.flag.sync.logic.BackupConverter
 import com.flag.sync.logic.ConvertOutcome
 import com.flag.sync.logic.FlagMapper
 import com.flag.sync.logic.FlagMapperProvider
+import com.flag.sync.logic.InstagramRootSync
 import com.flag.sync.logic.JsonDiff
 import com.flag.sync.model.*
 import com.flag.sync.ui.components.*
@@ -151,6 +152,8 @@ private fun UnifiedCompare(
     var showAddFlagDialog by remember { mutableStateOf(false) }
     var showDeleteAllDialog by remember { mutableStateOf(false) }
     var showDeleteAllExceptDialog by remember { mutableStateOf(false) }
+    var showApplyRootDialog by remember { mutableStateOf(false) }
+    var applyRootTargetSource by remember { mutableStateOf('A') }
     var activeFlagSource by remember { mutableStateOf('A') }
     var showEditDialog by remember { mutableStateOf(false) }
     var editingFlagPath by remember { mutableStateOf("") }
@@ -226,6 +229,55 @@ private fun UnifiedCompare(
         if (deletedSource == 'A') vm.restoreAllDeletedFlagsA() else vm.restoreAllDeletedFlagsB()
         if (dontAskAgainChecked) onConfirmDeletionChange(false)
         showBulkRestoreDialog = false
+    }
+
+    val handlePullFromRoot = { target: Char ->
+        scope.launch {
+            Toast.makeText(context, context.getString(R.string.root_sync_pulling), Toast.LENGTH_SHORT).show()
+            val result = InstagramRootSync.pullConfig(context)
+            if (result.isSuccess && result.data != null) {
+                val raw = result.data
+                val parsedMap = withContext(Dispatchers.Default) {
+                    val outcome = BackupConverter.convert("mc_overrides.json", raw)
+                    when (outcome) {
+                        is ConvertOutcome.Success -> JsonDiff.flatten(outcome.data)
+                        is ConvertOutcome.Error -> {
+                            try {
+                                val parsed = JsonDiff.parse(raw)
+                                if (parsed is List<*>) null else JsonDiff.flatten(parsed)
+                            } catch (_: Exception) { null }
+                        }
+                    }
+                }
+                if (parsedMap != null) {
+                    if (target == 'A') {
+                        vm.updateNameA("Instagram (mc_overrides.json)")
+                        vm.updateFlatA(parsedMap)
+                        vm.updateErrorA(null)
+                    } else {
+                        vm.updateNameB("Instagram (mc_overrides.json)")
+                        vm.updateFlatB(parsedMap)
+                        vm.updateErrorB(null)
+                    }
+                    error = null
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.root_sync_pull_success, parsedMap.size),
+                        Toast.LENGTH_LONG
+                    ).show()
+                } else {
+                    Toast.makeText(context, context.getString(R.string.error_mapping_as_backup), Toast.LENGTH_LONG).show()
+                }
+            } else {
+                val msg = result.errorMessage ?: context.getString(R.string.root_sync_error_not_rooted)
+                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    val handleApplyToRoot = { target: Char ->
+        applyRootTargetSource = target
+        showApplyRootDialog = true
     }
 
     val pickMap = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
@@ -384,6 +436,17 @@ private fun UnifiedCompare(
                             )
                         }
                     }
+
+                    // Direct Root Sync Bar
+                    RootSyncRow(
+                        isSingleMode = vm.compareMode == CompareMode.SINGLE_CHECK,
+                        onPullA = { handlePullFromRoot('A') },
+                        onPullB = if (vm.compareMode != CompareMode.SINGLE_CHECK) { { handlePullFromRoot('B') } } else null,
+                        onApplyA = if (vm.flatA != null) { { handleApplyToRoot('A') } } else null,
+                        onApplyB = if (vm.flatB != null && vm.compareMode != CompareMode.SINGLE_CHECK) { { handleApplyToRoot('B') } } else null,
+                        accentA = accents.teal,
+                        accentB = accents.amber
+                    )
                 }
             }
 
@@ -779,27 +842,65 @@ private fun UnifiedCompare(
                 }
                 if (vm.movedFlagsA.isNotEmpty() || vm.movedFlagsB.isNotEmpty() || vm.editedFlagsA.isNotEmpty() || vm.editedFlagsB.isNotEmpty()) {
                     item(key = "downloads") {
-                        Row(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            if (vm.movedFlagsA.isNotEmpty() || vm.editedFlagsA.isNotEmpty()) PrimaryButton(text = stringResource(R.string.compare_download_a), onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                val fileName = if (autoRenameOverrides) "mc_overrides.json" else (vm.nameA ?: "a").substringBeforeLast('.') + ".json"
-                                if (useCustomPicker) {
-                                    val data = JsonDiff.unflattenAndSerializeCompact(vm.flatA ?: emptyMap())
-                                    onSaveFile(data, fileName, PickerTarget.BACKUP_A)
-                                } else {
-                                    saveA.launch(fileName)
+                        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                if (vm.movedFlagsA.isNotEmpty() || vm.editedFlagsA.isNotEmpty()) PrimaryButton(text = stringResource(R.string.compare_download_a), onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    val fileName = if (autoRenameOverrides) "mc_overrides.json" else (vm.nameA ?: "a").substringBeforeLast('.') + ".json"
+                                    if (useCustomPicker) {
+                                        val data = JsonDiff.unflattenAndSerializeCompact(vm.flatA ?: emptyMap())
+                                        onSaveFile(data, fileName, PickerTarget.BACKUP_A)
+                                    } else {
+                                        saveA.launch(fileName)
+                                    }
+                                }, accent = accents.teal, modifier = Modifier.weight(1f))
+                                if (vm.movedFlagsB.isNotEmpty() || vm.editedFlagsB.isNotEmpty()) PrimaryButton(text = stringResource(R.string.compare_download_b), onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    val fileName = if (autoRenameOverrides) "mc_overrides.json" else (vm.nameB ?: "b").substringBeforeLast('.') + ".json"
+                                    if (useCustomPicker) {
+                                        val data = JsonDiff.unflattenAndSerializeCompact(vm.flatB ?: emptyMap())
+                                        onSaveFile(data, fileName, PickerTarget.BACKUP_B)
+                                    } else {
+                                        saveB.launch(fileName)
+                                    }
+                                }, accent = accents.amber, modifier = Modifier.weight(1f))
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Surface(
+                                    onClick = { handleApplyToRoot('A') },
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = accents.teal.copy(alpha = 0.15f),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, accents.teal.copy(alpha = 0.4f)),
+                                    modifier = Modifier.weight(1f).height(42.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxSize(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Icon(Icons.Rounded.Bolt, contentDescription = null, tint = accents.teal, modifier = Modifier.size(16.dp))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(text = stringResource(R.string.root_sync_apply_a), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = accents.teal)
+                                    }
                                 }
-                            }, accent = accents.teal, modifier = Modifier.weight(1f))
-                            if (vm.movedFlagsB.isNotEmpty() || vm.editedFlagsB.isNotEmpty()) PrimaryButton(text = stringResource(R.string.compare_download_b), onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                val fileName = if (autoRenameOverrides) "mc_overrides.json" else (vm.nameB ?: "b").substringBeforeLast('.') + ".json"
-                                if (useCustomPicker) {
-                                    val data = JsonDiff.unflattenAndSerializeCompact(vm.flatB ?: emptyMap())
-                                    onSaveFile(data, fileName, PickerTarget.BACKUP_B)
-                                } else {
-                                    saveB.launch(fileName)
+                                Surface(
+                                    onClick = { handleApplyToRoot('B') },
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = accents.amber.copy(alpha = 0.15f),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, accents.amber.copy(alpha = 0.4f)),
+                                    modifier = Modifier.weight(1f).height(42.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxSize(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Icon(Icons.Rounded.Bolt, contentDescription = null, tint = accents.amber, modifier = Modifier.size(16.dp))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(text = stringResource(R.string.root_sync_apply_b), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = accents.amber)
+                                    }
                                 }
-                            }, accent = accents.amber, modifier = Modifier.weight(1f))
+                            }
                         }
                     }
                 }
@@ -913,7 +1014,7 @@ private fun UnifiedCompare(
                 }
                 if (vm.deletedFlagsA.isNotEmpty() || vm.movedFlagsA.isNotEmpty() || vm.editedFlagsA.isNotEmpty()) {
                     item(key = "dl_single") {
-                        Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+                        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             PrimaryButton(text = stringResource(R.string.compare_download_a), onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 val fileName = if (autoRenameOverrides) "mc_overrides.json" else (vm.nameA ?: "a").substringBeforeLast('.') + ".json"
@@ -924,6 +1025,29 @@ private fun UnifiedCompare(
                                     saveA.launch(fileName)
                                 }
                             }, accent = accents.teal, modifier = Modifier.fillMaxWidth())
+
+                            Surface(
+                                onClick = { handleApplyToRoot('A') },
+                                shape = RoundedCornerShape(14.dp),
+                                color = accents.teal.copy(alpha = 0.15f),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, accents.teal.copy(alpha = 0.4f)),
+                                modifier = Modifier.fillMaxWidth().height(48.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(Icons.Rounded.Bolt, contentDescription = null, tint = accents.teal, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        text = stringResource(R.string.root_sync_apply_single),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        color = accents.teal
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -1155,27 +1279,65 @@ private fun UnifiedCompare(
                 }
                 if (vm.deletedFlagsA.isNotEmpty() || vm.deletedFlagsB.isNotEmpty() || vm.movedFlagsA.isNotEmpty() || vm.movedFlagsB.isNotEmpty() || vm.editedFlagsA.isNotEmpty() || vm.editedFlagsB.isNotEmpty()) {
                     item(key = "dl_double") {
-                        Row(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            if (vm.deletedFlagsA.isNotEmpty() || vm.movedFlagsA.isNotEmpty() || vm.editedFlagsA.isNotEmpty()) PrimaryButton(text = stringResource(R.string.compare_download_a), onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                val fileName = if (autoRenameOverrides) "mc_overrides.json" else (vm.nameA ?: "a").substringBeforeLast('.') + ".json"
-                                if (useCustomPicker) {
-                                    val data = JsonDiff.unflattenAndSerializeCompact(vm.flatA ?: emptyMap())
-                                    onSaveFile(data, fileName, PickerTarget.BACKUP_A)
-                                } else {
-                                    saveA.launch(fileName)
+                        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                if (vm.deletedFlagsA.isNotEmpty() || vm.movedFlagsA.isNotEmpty() || vm.editedFlagsA.isNotEmpty()) PrimaryButton(text = stringResource(R.string.compare_download_a), onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    val fileName = if (autoRenameOverrides) "mc_overrides.json" else (vm.nameA ?: "a").substringBeforeLast('.') + ".json"
+                                    if (useCustomPicker) {
+                                        val data = JsonDiff.unflattenAndSerializeCompact(vm.flatA ?: emptyMap())
+                                        onSaveFile(data, fileName, PickerTarget.BACKUP_A)
+                                    } else {
+                                        saveA.launch(fileName)
+                                    }
+                                }, accent = accents.teal, modifier = Modifier.weight(1f))
+                                if (vm.deletedFlagsB.isNotEmpty() || vm.movedFlagsB.isNotEmpty() || vm.editedFlagsB.isNotEmpty()) PrimaryButton(text = stringResource(R.string.compare_download_b), onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    val fileName = if (autoRenameOverrides) "mc_overrides.json" else (vm.nameB ?: "b").substringBeforeLast('.') + ".json"
+                                    if (useCustomPicker) {
+                                        val data = JsonDiff.unflattenAndSerializeCompact(vm.flatB ?: emptyMap())
+                                        onSaveFile(data, fileName, PickerTarget.BACKUP_B)
+                                    } else {
+                                        saveB.launch(fileName)
+                                    }
+                                }, accent = accents.amber, modifier = Modifier.weight(1f))
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Surface(
+                                    onClick = { handleApplyToRoot('A') },
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = accents.teal.copy(alpha = 0.15f),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, accents.teal.copy(alpha = 0.4f)),
+                                    modifier = Modifier.weight(1f).height(42.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxSize(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Icon(Icons.Rounded.Bolt, contentDescription = null, tint = accents.teal, modifier = Modifier.size(16.dp))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(text = stringResource(R.string.root_sync_apply_a), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = accents.teal)
+                                    }
                                 }
-                            }, accent = accents.teal, modifier = Modifier.weight(1f))
-                            if (vm.deletedFlagsB.isNotEmpty() || vm.movedFlagsB.isNotEmpty() || vm.editedFlagsB.isNotEmpty()) PrimaryButton(text = stringResource(R.string.compare_download_b), onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                val fileName = if (autoRenameOverrides) "mc_overrides.json" else (vm.nameB ?: "b").substringBeforeLast('.') + ".json"
-                                if (useCustomPicker) {
-                                    val data = JsonDiff.unflattenAndSerializeCompact(vm.flatB ?: emptyMap())
-                                    onSaveFile(data, fileName, PickerTarget.BACKUP_B)
-                                } else {
-                                    saveB.launch(fileName)
+                                Surface(
+                                    onClick = { handleApplyToRoot('B') },
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = accents.amber.copy(alpha = 0.15f),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, accents.amber.copy(alpha = 0.4f)),
+                                    modifier = Modifier.weight(1f).height(42.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxSize(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Icon(Icons.Rounded.Bolt, contentDescription = null, tint = accents.amber, modifier = Modifier.size(16.dp))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(text = stringResource(R.string.root_sync_apply_b), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = accents.amber)
+                                    }
                                 }
-                            }, accent = accents.amber, modifier = Modifier.weight(1f))
+                            }
                         }
                     }
                 }
@@ -1495,6 +1657,39 @@ private fun UnifiedCompare(
                         vm.deleteAllFlagsExceptB(predicate)
                     }
                     showDeleteAllExceptDialog = false
+                }
+            )
+        }
+
+        if (showApplyRootDialog) {
+            val count = if (applyRootTargetSource == 'A') vm.flatA?.size ?: 0 else vm.flatB?.size ?: 0
+            ApplyRootDialog(
+                flagCount = count,
+                targetSource = applyRootTargetSource,
+                onDismiss = { showApplyRootDialog = false },
+                onConfirm = { autoRestart ->
+                    showApplyRootDialog = false
+                    scope.launch {
+                        val data = if (applyRootTargetSource == 'A') vm.flatA else vm.flatB
+                        if (data == null) return@launch
+                        val jsonStr = withContext(Dispatchers.Default) {
+                            JsonDiff.unflattenAndSerializeCompact(data)
+                        }
+                        val result = InstagramRootSync.pushConfig(context, jsonStr, autoRestart)
+                        if (result.isSuccess) {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.root_sync_apply_success, data.size),
+                                Toast.LENGTH_LONG
+                            ).show()
+                        } else {
+                            Toast.makeText(
+                                context,
+                                result.errorMessage ?: "Failed to apply root config",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
                 }
             )
         }

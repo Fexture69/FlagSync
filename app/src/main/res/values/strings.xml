@@ -89,6 +89,26 @@
     <string name="delete_all_except_confirm">Keep %1$d &amp; Delete %2$d</string>
     <string name="delete_all_except_empty_warning">No flags match the filter. All %1$d flags will be deleted!</string>
 
+    <!-- Root Instagram Direct Sync -->
+    <string name="root_sync_pull_single">⚡ Pull from Instagram (Root)</string>
+    <string name="root_sync_pull_a">⚡ Pull IG → A</string>
+    <string name="root_sync_pull_b">⚡ Pull IG → B</string>
+    <string name="root_sync_apply_single">⚡ Apply to Instagram (Root)</string>
+    <string name="root_sync_apply_a">⚡ Apply A to IG</string>
+    <string name="root_sync_apply_b">⚡ Apply B to IG</string>
+    <string name="root_sync_pulling">Pulling configuration from Instagram…</string>
+    <string name="root_sync_pull_success">Loaded %1$d flags from Instagram (mc_overrides.json)!</string>
+    <string name="root_sync_apply_confirm_title">Apply to Instagram?</string>
+    <string name="root_sync_apply_confirm_msg">This will write %1$d flags to Instagram\'s mc_overrides.json using root.</string>
+    <string name="root_sync_apply_confirm_action">Apply &amp; Restart</string>
+    <string name="root_sync_apply_success">Applied %1$d flags to Instagram! Instagram restarted.</string>
+    <string name="root_sync_auto_restart">Restart Instagram automatically</string>
+    <string name="root_sync_error_not_rooted">Root access (su) is not available or was denied.</string>
+    <string name="root_sync_error_not_found">No overrides found in Instagram (mc_overrides.json does not exist).</string>
+    <string name="root_sync_clear_title">Reset Instagram Overrides</string>
+    <string name="root_sync_clear_confirm">Delete mc_overrides.json from Instagram and revert to stock configuration?</string>
+    <string name="root_sync_clear_success">Instagram overrides deleted and app restarted!</string>
+
     <!-- Converter Screen -->
     <string name="converter_eyebrow">convert</string>
     <string name="converter_title">Convert .ibackup → .json</string>

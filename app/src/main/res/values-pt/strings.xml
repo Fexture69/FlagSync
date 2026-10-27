@@ -90,6 +90,26 @@
     <string name="delete_all_except_confirm">Manter %1$d e Excluir %2$d</string>
     <string name="delete_all_except_empty_warning">Nenhuma flag corresponde ao filtro. Todas as %1$d flags serão excluídas!</string>
 
+    <!-- Root Sincronização Direta Instagram -->
+    <string name="root_sync_pull_single">⚡ Puxar do Instagram (Root)</string>
+    <string name="root_sync_pull_a">⚡ Puxar IG → A</string>
+    <string name="root_sync_pull_b">⚡ Puxar IG → B</string>
+    <string name="root_sync_apply_single">⚡ Aplicar no Instagram (Root)</string>
+    <string name="root_sync_apply_a">⚡ Aplicar A no IG</string>
+    <string name="root_sync_apply_b">⚡ Aplicar B no IG</string>
+    <string name="root_sync_pulling">Buscando configurações do Instagram…</string>
+    <string name="root_sync_pull_success">%1$d flags carregadas do Instagram (mc_overrides.json)!</string>
+    <string name="root_sync_apply_confirm_title">Aplicar no Instagram?</string>
+    <string name="root_sync_apply_confirm_msg">Isso irá gravar %1$d flags no mc_overrides.json do Instagram usando root.</string>
+    <string name="root_sync_apply_confirm_action">Aplicar e Reiniciar</string>
+    <string name="root_sync_apply_success">%1$d flags aplicadas no Instagram! Instagram reiniciado.</string>
+    <string name="root_sync_auto_restart">Reiniciar o Instagram automaticamente</string>
+    <string name="root_sync_error_not_rooted">Acesso root (su) não disponível ou negado.</string>
+    <string name="root_sync_error_not_found">Nenhuma modificação encontrada no Instagram (mc_overrides.json não existe).</string>
+    <string name="root_sync_clear_title">Redefinir Flags do Instagram</string>
+    <string name="root_sync_clear_confirm">Excluir o mc_overrides.json do Instagram e voltar à configuração padrão?</string>
+    <string name="root_sync_clear_success">Modificações do Instagram excluídas e aplicativo reiniciado!</string>
+
     <!-- Tela do Conversor -->
     <string name="converter_eyebrow">converter</string>
     <string name="converter_title">Converter .ibackup → .json</string>
