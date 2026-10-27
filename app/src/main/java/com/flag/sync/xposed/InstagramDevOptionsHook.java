@@ -65,7 +65,7 @@ public class InstagramDevOptionsHook {
         fallbackHook(lpparam.classLoader);
     }
 
-    private static void findAndHookDynamicMethod(DexKitBridge bridge, ClassLoader classLoader) {
+    public static void findAndHookDynamicMethod(DexKitBridge bridge, ClassLoader classLoader) {
         boolean found = false;
 
         // Tier 1: Search using string "is_employee"
@@ -267,7 +267,7 @@ public class InstagramDevOptionsHook {
         }
     }
 
-    private static void fallbackHook(ClassLoader classLoader) {
+    public static void fallbackHook(ClassLoader classLoader) {
         try {
             Class<?> sessionClass = classLoader.loadClass(USER_SESSION_CLASS);
             XposedBridge.log(TAG + ": UserSession class loaded: " + sessionClass.getName());

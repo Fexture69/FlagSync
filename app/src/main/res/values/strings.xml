@@ -291,4 +291,27 @@
     <string name="file_picker_overwrite_message">The file \"%1$s\" already exists in this folder. Do you want to overwrite it?</string>
     <string name="file_picker_overwrite_confirm">Overwrite</string>
     <string name="file_picker_search_hint">Search in current folder...</string>
+
+    <!-- Instagram Quality & Enhancement Settings -->
+    <string name="settings_quality_label">QUALITY (INSTAGRAM)</string>
+    <string name="settings_force_reels_quality_title">Force Reels Quality</string>
+    <string name="settings_force_reels_quality_subtitle">Forces reels and videos to play at maximum or chosen resolution</string>
+    <string name="settings_high_res_images_title">Load highest resolution images</string>
+    <string name="settings_high_res_images_subtitle">Always request and display the largest image candidate</string>
+    <string name="settings_max_upload_quality_title">Always Upload at Highest Quality</string>
+    <string name="settings_max_upload_quality_subtitle">Force Instagram\'s highest quality media upload toggle permanently on</string>
+    <string name="settings_spoof_device_title">Spoof device (HDR video)</string>
+    <string name="settings_spoof_device_subtitle">Instagram sees this phone as the chosen device, unlocking HDR video &amp; dev flags</string>
+
+    <string name="quality_auto">Auto</string>
+    <string name="quality_360">360p</string>
+    <string name="quality_480">480p</string>
+    <string name="quality_720">720p</string>
+    <string name="quality_1080">1080p</string>
+    <string name="quality_max">Max Available</string>
+
+    <string name="spoof_device_off">Off (Default)</string>
+    <string name="spoof_device_s26">Galaxy S26 Ultra</string>
+    <string name="spoof_device_pixel">Pixel 11 Pro XL</string>
+    <string name="spoof_device_toast">Restart Instagram to apply device spoofing and HDR video flags.</string>
 </resources>

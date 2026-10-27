@@ -292,4 +292,27 @@
     <string name="file_picker_overwrite_message">El archivo \"%1$s\" ya existe en esta carpeta. ¿Desea sobrescribirlo?</string>
     <string name="file_picker_overwrite_confirm">Sobrescribir</string>
     <string name="file_picker_search_hint">Buscar en la carpeta actual…</string>
+
+    <!-- Ajustes de Calidad de Instagram -->
+    <string name="settings_quality_label">CALIDAD (INSTAGRAM)</string>
+    <string name="settings_force_reels_quality_title">Forzar calidad de Reels</string>
+    <string name="settings_force_reels_quality_subtitle">Fuerza la reproducción de reels y videos en la máxima resolución o elegida</string>
+    <string name="settings_high_res_images_title">Cargar imágenes en resolución máxima</string>
+    <string name="settings_high_res_images_subtitle">Solicita y muestra siempre el candidato de imagen de mayor resolución</string>
+    <string name="settings_max_upload_quality_title">Subir siempre en máxima calidad</string>
+    <string name="settings_max_upload_quality_subtitle">Mantiene siempre activo el interruptor de máxima calidad de subida</string>
+    <string name="settings_spoof_device_title">Simular dispositivo (Video HDR)</string>
+    <string name="settings_spoof_device_subtitle">Instagram identifica el teléfono como el modelo seleccionado, desbloqueando HDR y flags de desarrollo</string>
+
+    <string name="quality_auto">Automático</string>
+    <string name="quality_360">360p</string>
+    <string name="quality_480">480p</string>
+    <string name="quality_720">720p</string>
+    <string name="quality_1080">1080p</string>
+    <string name="quality_max">Máxima Disponible</string>
+
+    <string name="spoof_device_off">Desactivado (Predeterminado)</string>
+    <string name="spoof_device_s26">Galaxy S26 Ultra</string>
+    <string name="spoof_device_pixel">Pixel 11 Pro XL</string>
+    <string name="spoof_device_toast">Reinicia Instagram para aplicar la simulación del dispositivo y las flags HDR.</string>
 </resources>

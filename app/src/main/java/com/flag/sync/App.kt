@@ -113,6 +113,20 @@ fun FlagSyncApp(mainViewModel: MainViewModel = viewModel()) {
         mutableStateOf(prefs.getString("custom_color_hex", "#4FD8C9") ?: "#4FD8C9")
     }
 
+    // Instagram Quality & Enhancements State
+    var forceReelQuality by remember {
+        mutableIntStateOf(prefs.getInt("force_reel_quality", 0))
+    }
+    var highResImages by remember {
+        mutableStateOf(prefs.getBoolean("high_res_images", false))
+    }
+    var maxUploadQuality by remember {
+        mutableStateOf(prefs.getBoolean("max_upload_quality", false))
+    }
+    var spoofDevice by remember {
+        mutableStateOf(prefs.getString("spoof_device", "") ?: "")
+    }
+
     // Feature Tour State
     var isTourSeen by remember { mutableStateOf(prefs.getBoolean("tour_seen", false)) }
     var isTourActive by remember { mutableStateOf(!isTourSeen) }
@@ -397,6 +411,34 @@ fun FlagSyncApp(mainViewModel: MainViewModel = viewModel()) {
                                     isTourActive = true
                                 }
                             }
+                            val onForceReelQualityChangeS = remember {
+                                { value: Int ->
+                                    forceReelQuality = value
+                                    prefs.edit().putInt("force_reel_quality", value).apply()
+                                    broadcastQualityUpdate(context, "force_reel_quality", intVal = value)
+                                }
+                            }
+                            val onHighResImagesChangeS = remember {
+                                { value: Boolean ->
+                                    highResImages = value
+                                    prefs.edit().putBoolean("high_res_images", value).apply()
+                                    broadcastQualityUpdate(context, "high_res_images", boolVal = value)
+                                }
+                            }
+                            val onMaxUploadQualityChangeS = remember {
+                                { value: Boolean ->
+                                    maxUploadQuality = value
+                                    prefs.edit().putBoolean("max_upload_quality", value).apply()
+                                    broadcastQualityUpdate(context, "max_upload_quality", boolVal = value)
+                                }
+                            }
+                            val onSpoofDeviceChangeS = remember {
+                                { value: String ->
+                                    spoofDevice = value
+                                    prefs.edit().putString("spoof_device", value).apply()
+                                    broadcastQualityUpdate(context, "spoof_device", strVal = value)
+                                }
+                            }
 
                             SettingsScreen(
                                 appTheme = appTheme,
@@ -413,6 +455,14 @@ fun FlagSyncApp(mainViewModel: MainViewModel = viewModel()) {
                                 onAutoRenameOverridesChange = onAutoRenameOverridesChangeS,
                                 customColorHex = customColorHex,
                                 onCustomColorChange = onCustomColorChangeS,
+                                forceReelQuality = forceReelQuality,
+                                onForceReelQualityChange = onForceReelQualityChangeS,
+                                highResImages = highResImages,
+                                onHighResImagesChange = onHighResImagesChangeS,
+                                maxUploadQuality = maxUploadQuality,
+                                onMaxUploadQualityChange = onMaxUploadQualityChangeS,
+                                spoofDevice = spoofDevice,
+                                onSpoofDeviceChange = onSpoofDeviceChangeS,
                                 autoCheckMappingUpdates = autoCheckMappingUpdates,
                                 onAutoCheckMappingUpdatesChange = onAutoCheckMappingUpdatesChangeS,
                                 mappingUpdateAvailable = mainViewModel.mappingUpdateAvailable,
@@ -761,5 +811,32 @@ fun FlagSyncApp(mainViewModel: MainViewModel = viewModel()) {
                 }
             }
         }
+    }
+}
+
+private fun broadcastQualityUpdate(
+    context: Context,
+    key: String,
+    intVal: Int? = null,
+    boolVal: Boolean? = null,
+    strVal: String? = null
+) {
+    try {
+        val prefsFile = File(context.applicationInfo.dataDir, "shared_prefs/flag_sync_prefs.xml")
+        prefsFile.setReadable(true, false)
+        prefsFile.parentFile?.setReadable(true, false)
+        prefsFile.parentFile?.setExecutable(true, false)
+    } catch (_: Throwable) {}
+
+    val packages = listOf("com.instagram.android", "com.instagram.lite", "paw.instagram.android")
+    for (pkg in packages) {
+        val intent = android.content.Intent("com.flag.sync.ACTION_UPDATE_QUALITY_PREF").apply {
+            setPackage(pkg)
+            putExtra("key", key)
+            intVal?.let { putExtra("int_val", it) }
+            boolVal?.let { putExtra("bool_val", it) }
+            strVal?.let { putExtra("str_val", it) }
+        }
+        context.sendBroadcast(intent)
     }
 }

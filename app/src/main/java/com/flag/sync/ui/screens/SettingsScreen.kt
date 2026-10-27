@@ -94,6 +94,14 @@ fun SettingsScreen(
     onUseCustomPickerChange: (Boolean) -> Unit = {},
     customColorHex: String = "#4FD8C9",
     onCustomColorChange: (String) -> Unit = {},
+    forceReelQuality: Int = 0,
+    onForceReelQualityChange: (Int) -> Unit = {},
+    highResImages: Boolean = false,
+    onHighResImagesChange: (Boolean) -> Unit = {},
+    maxUploadQuality: Boolean = false,
+    onMaxUploadQualityChange: (Boolean) -> Unit = {},
+    spoofDevice: String = "",
+    onSpoofDeviceChange: (String) -> Unit = {},
     onRestartTour: () -> Unit,
     listState: androidx.compose.foundation.lazy.LazyListState = rememberLazyListState(),
 ) {
@@ -104,6 +112,8 @@ fun SettingsScreen(
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     var showLanguageSheet by remember { mutableStateOf(false) }
+    var showReelQualityDialog by remember { mutableStateOf(false) }
+    var showSpoofDeviceDialog by remember { mutableStateOf(false) }
 
     var secretClickCount by remember { mutableIntStateOf(0) }
     var lastSecretClickTime by remember { mutableLongStateOf(0L) }
@@ -304,6 +314,70 @@ fun SettingsScreen(
                 )
             }
 
+            // --- CATEGORIA QUALIDADE (INSTAGRAM) ---
+            item {
+                Text(
+                    text = stringResource(R.string.settings_quality_label),
+                    fontFamily = MonoFamily,
+                    fontSize = 11.sp,
+                    color = accents.textMuted,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
+                )
+            }
+
+            item {
+                val qualityLabel = when (forceReelQuality) {
+                    360 -> stringResource(R.string.quality_360)
+                    480 -> stringResource(R.string.quality_480)
+                    720 -> stringResource(R.string.quality_720)
+                    1080 -> stringResource(R.string.quality_1080)
+                    Int.MAX_VALUE -> stringResource(R.string.quality_max)
+                    else -> stringResource(R.string.quality_auto)
+                }
+
+                ClickableSettingRow(
+                    title = "${stringResource(R.string.settings_force_reels_quality_title)}: $qualityLabel",
+                    subtitle = stringResource(R.string.settings_force_reels_quality_subtitle),
+                    icon = Icons.Rounded.Movie,
+                    onClick = { showReelQualityDialog = true }
+                )
+            }
+
+            item {
+                SettingRow(
+                    title = stringResource(R.string.settings_high_res_images_title),
+                    subtitle = stringResource(R.string.settings_high_res_images_subtitle),
+                    checked = highResImages,
+                    onCheckedChange = onHighResImagesChange,
+                    icon = Icons.Rounded.Search
+                )
+            }
+
+            item {
+                SettingRow(
+                    title = stringResource(R.string.settings_max_upload_quality_title),
+                    subtitle = stringResource(R.string.settings_max_upload_quality_subtitle),
+                    checked = maxUploadQuality,
+                    onCheckedChange = onMaxUploadQualityChange,
+                    icon = Icons.Rounded.Upload
+                )
+            }
+
+            item {
+                val deviceLabel = when (spoofDevice) {
+                    "s26" -> stringResource(R.string.spoof_device_s26)
+                    "pixel" -> stringResource(R.string.spoof_device_pixel)
+                    else -> stringResource(R.string.spoof_device_off)
+                }
+
+                ClickableSettingRow(
+                    title = "${stringResource(R.string.settings_spoof_device_title)} · $deviceLabel",
+                    subtitle = stringResource(R.string.settings_spoof_device_subtitle),
+                    icon = Icons.Rounded.Movie,
+                    onClick = { showSpoofDeviceDialog = true }
+                )
+            }
+
             // --- CATEGORIA APP ---
             item {
                 Text(
@@ -462,6 +536,29 @@ fun SettingsScreen(
                     }
                 )
             }
+        }
+
+        if (showReelQualityDialog) {
+            ReelQualityDialog(
+                current = forceReelQuality,
+                onDismiss = { showReelQualityDialog = false },
+                onSelect = {
+                    onForceReelQualityChange(it)
+                    showReelQualityDialog = false
+                }
+            )
+        }
+
+        if (showSpoofDeviceDialog) {
+            SpoofDeviceDialog(
+                current = spoofDevice,
+                onDismiss = { showSpoofDeviceDialog = false },
+                onSelect = {
+                    onSpoofDeviceChange(it)
+                    showSpoofDeviceDialog = false
+                    Toast.makeText(context, context.getString(R.string.spoof_device_toast), Toast.LENGTH_LONG).show()
+                }
+            )
         }
     }
 }
@@ -1090,5 +1187,126 @@ private fun ColorPickerDialog(
         containerColor = MaterialTheme.colorScheme.surface,
         titleContentColor = MaterialTheme.colorScheme.onSurface,
         textContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+}
+
+@Composable
+private fun ReelQualityDialog(
+    current: Int,
+    onDismiss: () -> Unit,
+    onSelect: (Int) -> Unit
+) {
+    val accents = LocalAccentColors.current
+    val options = listOf(
+        0 to stringResource(R.string.quality_auto),
+        360 to stringResource(R.string.quality_360),
+        480 to stringResource(R.string.quality_480),
+        720 to stringResource(R.string.quality_720),
+        1080 to stringResource(R.string.quality_1080),
+        Int.MAX_VALUE to stringResource(R.string.quality_max)
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.settings_force_reels_quality_title),
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                options.forEach { (value, label) ->
+                    val isSelected = current == value
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable { onSelect(value) }
+                            .padding(vertical = 10.dp, horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = isSelected,
+                            onClick = { onSelect(value) },
+                            colors = RadioButtonDefaults.colors(selectedColor = accents.teal)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.edit_dialog_cancel))
+            }
+        },
+        shape = RoundedCornerShape(16.dp),
+        containerColor = MaterialTheme.colorScheme.surface
+    )
+}
+
+@Composable
+private fun SpoofDeviceDialog(
+    current: String,
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit
+) {
+    val accents = LocalAccentColors.current
+    val options = listOf(
+        "" to stringResource(R.string.spoof_device_off),
+        "s26" to stringResource(R.string.spoof_device_s26),
+        "pixel" to stringResource(R.string.spoof_device_pixel)
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.settings_spoof_device_title),
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                options.forEach { (value, label) ->
+                    val isSelected = current == value
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable { onSelect(value) }
+                            .padding(vertical = 10.dp, horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = isSelected,
+                            onClick = { onSelect(value) },
+                            colors = RadioButtonDefaults.colors(selectedColor = accents.teal)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.edit_dialog_cancel))
+            }
+        },
+        shape = RoundedCornerShape(16.dp),
+        containerColor = MaterialTheme.colorScheme.surface
     )
 }

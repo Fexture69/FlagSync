@@ -6,11 +6,13 @@
 package com.flag.sync.xposed
 
 import android.app.Application
+import android.content.Context
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
+import org.luckypray.dexkit.DexKitBridge
 
 class FlagSyncXposedEntry : IXposedHookLoadPackage {
 
@@ -26,13 +28,30 @@ class FlagSyncXposedEntry : IXposedHookLoadPackage {
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         if (!SUPPORTED_PACKAGES.contains(lpparam.packageName)) return
 
-        XposedBridge.log("$TAG: 🚀 Initializing FlagSync Xposed Hook in ${lpparam.packageName} (process: ${lpparam.processName})")
+        XposedBridge.log("$TAG: 🚀 Initializing FlagSync in ${lpparam.packageName} (process: ${lpparam.processName})")
 
-        // 1. Hook and unlock Developer Options inside Instagram
+        // 1. Hook Application.attach to initialize quality settings and device spoofing BEFORE Instagram reads device info
         try {
-            InstagramDevOptionsHook.hook(lpparam)
+            XposedHelpers.findAndHookMethod(
+                "android.app.Application",
+                lpparam.classLoader,
+                "attach",
+                Context::class.java,
+                object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        val context = param.args[0] as? Context ?: return
+                        try {
+                            InstagramQualityHooks.initFromPrefs(context)
+                            InstagramQualityHooks.applyDeviceSpoof(lpparam.classLoader)
+                            InstagramQualityHooks.syncHdrOverrides(context)
+                        } catch (t: Throwable) {
+                            XposedBridge.log("$TAG: ❌ Application.attach hook error: ${t.message}")
+                        }
+                    }
+                }
+            )
         } catch (t: Throwable) {
-            XposedBridge.log("$TAG: ❌ Failed to initialize Developer Options Hook: ${t.message}")
+            XposedBridge.log("$TAG: ❌ Failed to hook Application.attach: ${t.message}")
         }
 
         // 2. Hook Application.onCreate to register the internal receiver inside Instagram process
@@ -49,6 +68,23 @@ class FlagSyncXposedEntry : IXposedHookLoadPackage {
             )
         } catch (t: Throwable) {
             XposedBridge.log("$TAG: ❌ Failed to hook Application.onCreate: ${t.message}")
+        }
+
+        // 3. Run DexKit scans for Developer Options unlocker and Quality Hooks
+        try {
+            System.loadLibrary("dexkit")
+            val bridge = DexKitBridge.create(lpparam.appInfo.sourceDir)
+            if (bridge != null) {
+                bridge.use { dexKit ->
+                    InstagramDevOptionsHook.findAndHookDynamicMethod(dexKit, lpparam.classLoader)
+                    InstagramQualityHooks.installDexKitHooks(dexKit, lpparam.classLoader)
+                }
+            } else {
+                InstagramDevOptionsHook.fallbackHook(lpparam.classLoader)
+            }
+        } catch (t: Throwable) {
+            XposedBridge.log("$TAG: ❌ DexKit initialization error: ${t.message}")
+            InstagramDevOptionsHook.fallbackHook(lpparam.classLoader)
         }
     }
 }

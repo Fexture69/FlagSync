@@ -24,6 +24,7 @@ object InstagramHookReceiver {
     const val ACTION_APPLY_CONFIG = "com.flag.sync.ACTION_APPLY_CONFIG"
     const val ACTION_EXPORT_CONFIG = "com.flag.sync.ACTION_EXPORT_CONFIG"
     const val ACTION_CONFIG_EXPORTED = "com.flag.sync.ACTION_CONFIG_EXPORTED"
+    const val ACTION_UPDATE_QUALITY_PREF = "com.flag.sync.ACTION_UPDATE_QUALITY_PREF"
     const val ACTION_PING = "com.flag.sync.ACTION_PING"
     const val ACTION_PONG = "com.flag.sync.ACTION_PONG"
 
@@ -115,6 +116,37 @@ object InstagramHookReceiver {
                             XposedBridge.log("FlagSyncXposed: Export failed: ${e.message}")
                         }
                     }
+
+                    ACTION_UPDATE_QUALITY_PREF -> {
+                        val key = intent.getStringExtra("key") ?: return
+                        when (key) {
+                            "force_reel_quality" -> {
+                                val v = intent.getIntExtra("int_val", 0)
+                                InstagramQualityHooks.forceReelQuality = v
+                                InstagramQualityHooks.saveCache(ctx)
+                                XposedBridge.log("FlagSyncXposed: Updated forceReelQuality = $v")
+                            }
+                            "high_res_images" -> {
+                                val v = intent.getBooleanExtra("bool_val", false)
+                                InstagramQualityHooks.highResolutionImages = v
+                                InstagramQualityHooks.saveCache(ctx)
+                                XposedBridge.log("FlagSyncXposed: Updated highResolutionImages = $v")
+                            }
+                            "max_upload_quality" -> {
+                                val v = intent.getBooleanExtra("bool_val", false)
+                                InstagramQualityHooks.maxUploadQuality = v
+                                InstagramQualityHooks.saveCache(ctx)
+                                XposedBridge.log("FlagSyncXposed: Updated maxUploadQuality = $v")
+                            }
+                            "spoof_device" -> {
+                                val v = intent.getStringExtra("str_val") ?: ""
+                                InstagramQualityHooks.spoofDevice = v
+                                InstagramQualityHooks.saveCache(ctx)
+                                InstagramQualityHooks.syncHdrOverrides(ctx)
+                                XposedBridge.log("FlagSyncXposed: Updated spoofDevice = $v")
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -123,6 +155,7 @@ object InstagramHookReceiver {
             addAction(ACTION_PING)
             addAction(ACTION_APPLY_CONFIG)
             addAction(ACTION_EXPORT_CONFIG)
+            addAction(ACTION_UPDATE_QUALITY_PREF)
         }
 
         try {
