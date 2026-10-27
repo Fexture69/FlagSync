@@ -109,6 +109,12 @@
     <string name="root_sync_clear_confirm">Delete mc_overrides.json from Instagram and revert to stock configuration?</string>
     <string name="root_sync_clear_success">Instagram overrides deleted and app restarted!</string>
 
+    <!-- Xposed Module & Developer Options -->
+    <string name="xposed_module_desc">Unlocks Instagram Developer Options and enables direct MobileConfig sync</string>
+    <string name="xposed_dev_options_title">Instagram Developer Options</string>
+    <string name="xposed_dev_options_subtitle">Xposed module unlocks internal Developer Options and MobileConfig overrides inside Instagram</string>
+    <string name="xposed_status_tip">Enable FlagSync in LSPosed or Vector to unlock Developer Options in Instagram.</string>
+
     <!-- Converter Screen -->
     <string name="converter_eyebrow">convert</string>
     <string name="converter_title">Convert .ibackup → .json</string>

@@ -110,6 +110,12 @@
     <string name="root_sync_clear_confirm">Excluir o mc_overrides.json do Instagram e voltar à configuração padrão?</string>
     <string name="root_sync_clear_success">Modificações do Instagram excluídas e aplicativo reiniciado!</string>
 
+    <!-- Módulo Xposed & Opções de Desenvolvedor -->
+    <string name="xposed_module_desc">Desbloqueia as Opções do Desenvolvedor do Instagram e sincroniza o MobileConfig</string>
+    <string name="xposed_dev_options_title">Opções do Desenvolvedor do Instagram</string>
+    <string name="xposed_dev_options_subtitle">O módulo Xposed desbloqueia as Opções do Desenvolvedor internas e modificações de MobileConfig</string>
+    <string name="xposed_status_tip">Ative o FlagSync no LSPosed ou Vector para desbloquear as Opções do Desenvolvedor no Instagram.</string>
+
     <!-- Tela do Conversor -->
     <string name="converter_eyebrow">converter</string>
     <string name="converter_title">Converter .ibackup → .json</string>

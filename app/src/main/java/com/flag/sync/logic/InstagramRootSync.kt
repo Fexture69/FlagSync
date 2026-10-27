@@ -189,6 +189,17 @@ object InstagramRootSync {
             tempFile.writeText(jsonContent, Charsets.UTF_8)
 
             val pkg = getInstalledInstagramPackage()
+
+            // Notify Xposed hook if Instagram process is running
+            try {
+                val xposedIntent = android.content.Intent("com.flag.sync.ACTION_APPLY_CONFIG").apply {
+                    setPackage(pkg)
+                    putExtra("json_content", jsonContent)
+                    putExtra("restart", autoRestart)
+                }
+                context.sendBroadcast(xposedIntent)
+            } catch (_: Exception) {}
+
             val dir = "/data/data/$pkg/files/mobileconfig"
             val target = "$dir/mc_overrides.json"
 
