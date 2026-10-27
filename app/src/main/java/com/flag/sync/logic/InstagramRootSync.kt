@@ -146,7 +146,9 @@ object InstagramRootSync {
                 }
             }
         }
-        val filter = IntentFilter("com.flag.sync.ACTION_CONFIG_EXPORTED")
+        val filter = IntentFilter("com.flag.sync.ACTION_CONFIG_EXPORTED").apply {
+            addAction("ps.reso.instaeclipse.ACTION_SEND_CONFIG")
+        }
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
@@ -162,11 +164,66 @@ object InstagramRootSync {
                 setPackage(pkg)
             }
             context.sendBroadcast(exportIntent)
-            withTimeoutOrNull(900L) {
+
+            val ieIntent = Intent("ps.reso.instaeclipse.ACTION_EXPORT_CONFIG").apply {
+                setPackage(pkg)
+            }
+            context.sendBroadcast(ieIntent)
+
+            withTimeoutOrNull(1500L) {
                 deferred.await()
             }
         } catch (_: Exception) {
             null
+        } finally {
+            try {
+                context.unregisterReceiver(receiver)
+            } catch (_: Exception) {}
+        }
+    }
+
+    /**
+     * Attempts to push the config directly into Instagram without root via the Xposed broadcast bridge.
+     */
+    private suspend fun pushConfigViaBroadcast(context: Context, pkg: String, json: String, restart: Boolean): Boolean = withContext(Dispatchers.Main) {
+        val deferred = CompletableDeferred<Boolean>()
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(c: Context?, intent: Intent?) {
+                if (!deferred.isCompleted) {
+                    deferred.complete(intent?.getBooleanExtra("success", false) ?: true)
+                }
+            }
+        }
+        val filter = IntentFilter("com.flag.sync.ACTION_CONFIG_APPLIED")
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
+            } else {
+                context.registerReceiver(receiver, filter)
+            }
+        } catch (_: Exception) {
+            return@withContext false
+        }
+
+        try {
+            val exportIntent = Intent("com.flag.sync.ACTION_APPLY_CONFIG").apply {
+                setPackage(pkg)
+                putExtra("json_content", json)
+                putExtra("restart", restart)
+            }
+            context.sendBroadcast(exportIntent)
+
+            val ieIntent = Intent("ps.reso.instaeclipse.ACTION_IMPORT_CONFIG").apply {
+                setPackage(pkg)
+                putExtra("json_content", json)
+            }
+            context.sendBroadcast(ieIntent)
+
+            withTimeoutOrNull(1200L) {
+                deferred.await()
+            } ?: false
+        } catch (_: Exception) {
+            false
         } finally {
             try {
                 context.unregisterReceiver(receiver)
@@ -238,8 +295,11 @@ object InstagramRootSync {
     }
 
     /**
-     * Pushes a JSON config string into Instagram's mc_overrides.json, fixes directory ownership,
-     * permissions (chmod 664 / 775), restores SELinux security context, and cold restarts Instagram.
+     * Pushes a JSON config string into Instagram's mc_overrides.json.
+     * Uses a 2-tier strategy:
+     * 1. Xposed broadcast bridge (instant memory & disk apply if Instagram is running with FlagSync hook)
+     * 2. Direct Root persistence with safe UID/GID detection, permission repair (chmod 664 / 775),
+     *    SELinux context synchronization, and reliable app relaunch.
      */
     suspend fun pushConfig(
         context: Context,
@@ -251,42 +311,61 @@ object InstagramRootSync {
             // Validate JSON syntax before doing anything
             JSONObject(jsonContent)
 
-            tempFile.writeText(jsonContent, Charsets.UTF_8)
-
             val pkg = getInstalledInstagramPackage()
 
-            // Notify Xposed hook if Instagram process is running
-            try {
-                val xposedIntent = android.content.Intent("com.flag.sync.ACTION_APPLY_CONFIG").apply {
-                    setPackage(pkg)
-                    putExtra("json_content", jsonContent)
-                    putExtra("restart", autoRestart)
+            // Tier 1: Try broadcast to hooked Instagram process
+            val broadcastSuccess = try {
+                pushConfigViaBroadcast(context, pkg, jsonContent, autoRestart)
+            } catch (_: Exception) {
+                false
+            }
+
+            // Tier 2: Check if root is available and persist directly to disk
+            val rootAvailable = isRootAvailable()
+
+            if (!rootAvailable) {
+                return@withContext if (broadcastSuccess) {
+                    RootResult(true, Unit, null)
+                } else {
+                    RootResult(
+                        false,
+                        null,
+                        "Root access is not available and Instagram hook receiver did not respond. Please grant root access or ensure Instagram is running with FlagSync Xposed module enabled."
+                    )
                 }
-                context.sendBroadcast(xposedIntent)
-            } catch (_: Exception) {}
+            }
+
+            tempFile.writeText(jsonContent, Charsets.UTF_8)
+            tempFile.setReadable(true, false)
 
             val dir = "/data/data/$pkg/files/mobileconfig"
             val target = "$dir/mc_overrides.json"
 
+            // Get Instagram UID safely from PackageManager
+            val igUid = try {
+                context.packageManager.getApplicationInfo(pkg, 0).uid
+            } catch (_: Exception) {
+                10000
+            }
+
             val script = buildString {
                 append("mkdir -p \"$dir\"\n")
                 append("cp \"${tempFile.absolutePath}\" \"$target\"\n")
-                append("IG_UID=\$(stat -c '%u' \"/data/data/$pkg\" 2>/dev/null || echo 10000)\n")
-                append("IG_GID=\$(stat -c '%g' \"/data/data/$pkg\" 2>/dev/null || echo 10000)\n")
-                // Recursive chown for the mobileconfig folder and file
-                append("chown -R \$IG_UID:\$IG_GID \"$dir\"\n")
+                append("IG_UID=\$(stat -c '%u' \"/data/data/$pkg\" 2>/dev/null || echo $igUid)\n")
+                append("if [ -z \"\$IG_UID\" ]; then IG_UID=$igUid; fi\n")
+                append("chown -R \$IG_UID:\$IG_UID \"$dir\"\n")
                 append("chmod 775 \"$dir\"\n")
                 append("chmod 664 \"$target\"\n")
-                // Restore SELinux contexts so untrusted_app is not blocked
+                // Restore SELinux contexts so untrusted_app can read
                 append("restorecon -RF \"$dir\" 2>/dev/null || true\n")
                 append("chcon -R --reference=\"/data/data/$pkg/files\" \"$dir\" 2>/dev/null || true\n")
-                // Clear stale app cache
+                // Clear stale cache
                 append("rm -rf \"/data/data/$pkg/cache/\"* 2>/dev/null || true\n")
-                // Complete process kill & restart
+                // Cold restart Instagram if requested
                 if (autoRestart) {
-                    append("killall -9 \"$pkg\" 2>/dev/null || true\n")
-                    append("pkill -9 -f \"$pkg\" 2>/dev/null || true\n")
                     append("am force-stop \"$pkg\"\n")
+                    append("sleep 1\n")
+                    append("(monkey -p \"$pkg\" -c android.intent.category.LAUNCHER 1 2>/dev/null || am start -n \"$pkg/com.instagram.mainactivity.MainActivity\" 2>/dev/null || true)\n")
                 }
             }
 
@@ -299,7 +378,7 @@ object InstagramRootSync {
             val exitCode = process.waitFor()
             tempFile.delete()
 
-            if (exitCode == 0) {
+            if (exitCode == 0 || broadcastSuccess) {
                 RootResult(true, Unit, null)
             } else {
                 val err = process.errorStream.bufferedReader().readText()
@@ -322,9 +401,9 @@ object InstagramRootSync {
                 append("rm -f \"$configPath\"\n")
                 append("rm -rf \"/data/data/$pkg/cache/\"* 2>/dev/null || true\n")
                 if (autoRestart) {
-                    append("killall -9 \"$pkg\" 2>/dev/null || true\n")
-                    append("pkill -9 -f \"$pkg\" 2>/dev/null || true\n")
                     append("am force-stop \"$pkg\"\n")
+                    append("sleep 1\n")
+                    append("(monkey -p \"$pkg\" -c android.intent.category.LAUNCHER 1 2>/dev/null || am start -n \"$pkg/com.instagram.mainactivity.MainActivity\" 2>/dev/null || true)\n")
                 }
             }
             val process = Runtime.getRuntime().exec(arrayOf("su", "-c", script))
@@ -340,12 +419,16 @@ object InstagramRootSync {
     }
 
     /**
-     * Forces Instagram to stop via am force-stop and pkill.
+     * Forces Instagram to stop and relaunches it cleanly.
      */
     suspend fun restartInstagram(): RootResult<Unit> = withContext(Dispatchers.IO) {
         try {
             val pkg = getInstalledInstagramPackage()
-            val script = "killall -9 \"$pkg\" 2>/dev/null; pkill -9 -f \"$pkg\" 2>/dev/null; am force-stop \"$pkg\""
+            val script = buildString {
+                append("am force-stop \"$pkg\"\n")
+                append("sleep 1\n")
+                append("(monkey -p \"$pkg\" -c android.intent.category.LAUNCHER 1 2>/dev/null || am start -n \"$pkg/com.instagram.mainactivity.MainActivity\" 2>/dev/null || true)\n")
+            }
             val process = Runtime.getRuntime().exec(arrayOf("su", "-c", script))
             process.waitFor()
             RootResult(true, Unit, null)

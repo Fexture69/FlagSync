@@ -834,10 +834,14 @@ private fun broadcastQualityUpdate(
     strVal: String? = null
 ) {
     try {
-        val prefsFile = File(context.applicationInfo.dataDir, "shared_prefs/flag_sync_prefs.xml")
+        val dataDir = File(context.applicationInfo.dataDir)
+        dataDir.setReadable(true, false)
+        dataDir.setExecutable(true, false)
+        val sharedPrefsDir = File(dataDir, "shared_prefs")
+        sharedPrefsDir.setReadable(true, false)
+        sharedPrefsDir.setExecutable(true, false)
+        val prefsFile = File(sharedPrefsDir, "flag_sync_prefs.xml")
         prefsFile.setReadable(true, false)
-        prefsFile.parentFile?.setReadable(true, false)
-        prefsFile.parentFile?.setExecutable(true, false)
     } catch (_: Throwable) {}
 
     val packages = listOf("com.instagram.android", "com.instagram.lite", "paw.instagram.android")

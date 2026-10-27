@@ -106,7 +106,27 @@ public class InstagramQualityHooks {
     // --- INITIALIZATION & CACHE ---
 
     public static void initFromPrefs(Context context) {
-        // 1. Try local cache in Instagram filesDir
+        // 1. Try XSharedPreferences first (always reflects newest FlagSync settings)
+        try {
+            XSharedPreferences xPrefs = new XSharedPreferences("com.flag.sync", "flag_sync_prefs");
+            xPrefs.makeWorldReadable();
+            xPrefs.reload();
+            if (xPrefs.getAll().size() > 0) {
+                forceReelQuality = xPrefs.getInt("force_reel_quality", 0);
+                highResolutionImages = xPrefs.getBoolean("high_res_images", false);
+                maxUploadQuality = xPrefs.getBoolean("max_upload_quality", false);
+                spoofDevice = xPrefs.getString("spoof_device", "");
+                FlagSyncHookStatus.showStatusToast = xPrefs.getBoolean("show_hook_status_toast", true);
+                XposedBridge.log(TAG + ": Loaded fresh quality settings from XSharedPreferences: reels=" + forceReelQuality
+                        + ", highRes=" + highResolutionImages + ", maxUpload=" + maxUploadQuality + ", spoof=" + spoofDevice);
+                saveCache(context);
+                return;
+            }
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": XSharedPreferences fallback: " + t.getMessage());
+        }
+
+        // 2. Fall back to local cache file in Instagram filesDir
         try {
             File cacheFile = new File(context.getFilesDir(), CACHE_FILE);
             if (cacheFile.exists()) {
@@ -119,28 +139,9 @@ public class InstagramQualityHooks {
                 FlagSyncHookStatus.showStatusToast = obj.optBoolean("showStatusToast", true);
                 XposedBridge.log(TAG + ": Loaded quality settings from local cache: reels=" + forceReelQuality
                         + ", highRes=" + highResolutionImages + ", maxUpload=" + maxUploadQuality + ", spoof=" + spoofDevice);
-                return;
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": Error reading quality cache: " + t.getMessage());
-        }
-
-        // 2. Fallback to XSharedPreferences
-        try {
-            XSharedPreferences xPrefs = new XSharedPreferences("com.flag.sync", "flag_sync_prefs");
-            xPrefs.makeWorldReadable();
-            xPrefs.reload();
-            if (xPrefs.hasFileChanged() || xPrefs.getAll().size() > 0) {
-                forceReelQuality = xPrefs.getInt("force_reel_quality", 0);
-                highResolutionImages = xPrefs.getBoolean("high_res_images", false);
-                maxUploadQuality = xPrefs.getBoolean("max_upload_quality", false);
-                spoofDevice = xPrefs.getString("spoof_device", "");
-                FlagSyncHookStatus.showStatusToast = xPrefs.getBoolean("show_hook_status_toast", true);
-                XposedBridge.log(TAG + ": Loaded quality settings from XSharedPreferences");
-                saveCache(context);
-            }
-        } catch (Throwable t) {
-            XposedBridge.log(TAG + ": Error reading XSharedPreferences: " + t.getMessage());
         }
     }
 
@@ -428,6 +429,7 @@ public class InstagramQualityHooks {
     private static void installForceReelQualityHook(DexKitBridge bridge, ClassLoader classLoader) {
         try {
             Method videoVersionsGetter = null;
+            // 1. Try known dict classes
             for (String dictClass : DICT_CLASS_CANDIDATES) {
                 try {
                     List<MethodData> results = bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
@@ -448,14 +450,36 @@ public class InstagramQualityHooks {
                 } catch (Throwable ignored) {}
             }
 
+            // 1b. Fallback: Search globally for any 0-arg method returning List using "video_versions"
+            if (videoVersionsGetter == null) {
+                try {
+                    List<MethodData> results = bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+                            .paramCount(0)
+                            .returnType("java.util.List")
+                            .usingEqStrings(List.of("video_versions"))));
+                    if (results != null) {
+                        for (MethodData md : results) {
+                            try {
+                                Method m = md.getMethodInstance(classLoader);
+                                if (m.getReturnType() == List.class) {
+                                    videoVersionsGetter = m;
+                                    break;
+                                }
+                            } catch (Throwable ignored) {}
+                        }
+                    }
+                } catch (Throwable ignored) {}
+            }
+
             String heightGetterName = null;
+            // 2. Try known video version classes
             for (String versionClass : VIDEO_VERSION_CLASS_CANDIDATES) {
                 try {
                     List<MethodData> results = bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
                             .declaredClass(versionClass)
                             .paramCount(0)
                             .returnType("java.lang.Integer")
-                            .usingNumbers((long) HEIGHT_HASH)));
+                            .usingNumbers(List.of(HEIGHT_HASH))));
 
                     if (results != null && !results.isEmpty()) {
                         heightGetterName = results.get(0).getName();
@@ -464,8 +488,29 @@ public class InstagramQualityHooks {
                 } catch (Throwable ignored) {}
             }
 
-            if (videoVersionsGetter == null || heightGetterName == null) {
-                XposedBridge.log(TAG + ": ⚠️ Force Reel Quality hook members not found (getter=" + videoVersionsGetter + ", height=" + heightGetterName + ")");
+            // 2b. Fallback: Search globally for any 0-arg method returning Integer using HEIGHT_HASH
+            if (heightGetterName == null) {
+                try {
+                    List<MethodData> results = bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+                            .paramCount(0)
+                            .returnType("java.lang.Integer")
+                            .usingNumbers(List.of(HEIGHT_HASH))));
+                    if (results != null && !results.isEmpty()) {
+                        for (MethodData md : results) {
+                            if (md.getClassName().contains("VideoVersion") || md.getClassName().contains("Pando")) {
+                                heightGetterName = md.getName();
+                                break;
+                            }
+                        }
+                        if (heightGetterName == null) {
+                            heightGetterName = results.get(0).getName();
+                        }
+                    }
+                } catch (Throwable ignored) {}
+            }
+
+            if (videoVersionsGetter == null) {
+                XposedBridge.log(TAG + ": ⚠️ Force Reel Quality videoVersionsGetter not found");
                 return;
             }
 
@@ -492,7 +537,7 @@ public class InstagramQualityHooks {
                 }
             });
             FlagSyncHookStatus.isForceReelHooked = true;
-            XposedBridge.log(TAG + ": ✅ Hooked Force Reel Quality on " + videoVersionsGetter.getDeclaringClass().getName());
+            XposedBridge.log(TAG + ": ✅ Hooked Force Reel Quality on " + videoVersionsGetter.getDeclaringClass().getName() + " (height=" + heightGetterName + ")");
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": ❌ Force Reel Quality install error: " + t.getMessage());
         }
@@ -505,10 +550,27 @@ public class InstagramQualityHooks {
         for (Object item : items) {
             if (item == null) continue;
             try {
-                Method m = item.getClass().getMethod(heightGetterName);
-                Object hObj = m.invoke(item);
-                if (!(hObj instanceof Integer)) continue;
-                int h = (Integer) hObj;
+                int h = -1;
+                if (heightGetterName != null) {
+                    try {
+                        Method m = item.getClass().getMethod(heightGetterName);
+                        m.setAccessible(true);
+                        Object hObj = m.invoke(item);
+                        if (hObj instanceof Integer) {
+                            h = (Integer) hObj;
+                        }
+                    } catch (Throwable ignored) {}
+                }
+                if (h <= 0) {
+                    try {
+                        Method m = item.getClass().getMethod("getHeight");
+                        m.setAccessible(true);
+                        Object hObj = m.invoke(item);
+                        if (hObj instanceof Number) {
+                            h = ((Number) hObj).intValue();
+                        }
+                    } catch (Throwable ignored) {}
+                }
                 if (h <= 0) continue;
 
                 if (desired == Integer.MAX_VALUE) {

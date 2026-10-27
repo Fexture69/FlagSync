@@ -22,11 +22,16 @@ import java.nio.charset.StandardCharsets
 object InstagramHookReceiver {
 
     const val ACTION_APPLY_CONFIG = "com.flag.sync.ACTION_APPLY_CONFIG"
+    const val ACTION_CONFIG_APPLIED = "com.flag.sync.ACTION_CONFIG_APPLIED"
     const val ACTION_EXPORT_CONFIG = "com.flag.sync.ACTION_EXPORT_CONFIG"
     const val ACTION_CONFIG_EXPORTED = "com.flag.sync.ACTION_CONFIG_EXPORTED"
     const val ACTION_UPDATE_QUALITY_PREF = "com.flag.sync.ACTION_UPDATE_QUALITY_PREF"
     const val ACTION_PING = "com.flag.sync.ACTION_PING"
     const val ACTION_PONG = "com.flag.sync.ACTION_PONG"
+
+    // InstaEclipse compatibility aliases
+    const val ACTION_IE_IMPORT = "ps.reso.instaeclipse.ACTION_IMPORT_CONFIG"
+    const val ACTION_IE_EXPORT = "ps.reso.instaeclipse.ACTION_EXPORT_CONFIG"
 
     private var isRegistered = false
 
@@ -48,7 +53,7 @@ object InstagramHookReceiver {
                         ctx.sendBroadcast(reply)
                     }
 
-                    ACTION_APPLY_CONFIG -> {
+                    ACTION_APPLY_CONFIG, ACTION_IE_IMPORT -> {
                         val json = intent.getStringExtra("json_content")
                         if (json.isNullOrEmpty()) return
 
@@ -70,11 +75,21 @@ object InstagramHookReceiver {
                             }
                             if (dest.exists()) dest.delete()
                             tmp.renameTo(dest)
+                            dest.setReadable(true, false)
+                            dest.setWritable(true, false)
 
                             // Clear volatile cache
                             try {
                                 ctx.cacheDir?.deleteRecursively()
                             } catch (_: Exception) {}
+
+                            // Notify FlagSync that config was applied successfully
+                            val confirmReply = Intent(ACTION_CONFIG_APPLIED).apply {
+                                setPackage("com.flag.sync")
+                                putExtra("success", true)
+                                putExtra("length", json.length)
+                            }
+                            ctx.sendBroadcast(confirmReply)
 
                             Handler(Looper.getMainLooper()).post {
                                 Toast.makeText(
@@ -89,7 +104,7 @@ object InstagramHookReceiver {
                             if (intent.getBooleanExtra("restart", true)) {
                                 Handler(Looper.getMainLooper()).postDelayed({
                                     android.os.Process.killProcess(android.os.Process.myPid())
-                                }, 500)
+                                }, 800)
                             }
                         } catch (e: Exception) {
                             XposedBridge.log("FlagSyncXposed: Failed to apply config: ${e.message}")
@@ -103,7 +118,7 @@ object InstagramHookReceiver {
                         }
                     }
 
-                    ACTION_EXPORT_CONFIG -> {
+                    ACTION_EXPORT_CONFIG, ACTION_IE_EXPORT -> {
                         try {
                             val source = File(ctx.filesDir, "mobileconfig/mc_overrides.json")
                             val fileExists = source.exists() && source.length() > 0
@@ -171,6 +186,8 @@ object InstagramHookReceiver {
             addAction(ACTION_APPLY_CONFIG)
             addAction(ACTION_EXPORT_CONFIG)
             addAction(ACTION_UPDATE_QUALITY_PREF)
+            addAction(ACTION_IE_IMPORT)
+            addAction(ACTION_IE_EXPORT)
         }
 
         try {

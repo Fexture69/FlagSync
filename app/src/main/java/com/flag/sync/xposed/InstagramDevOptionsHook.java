@@ -46,17 +46,19 @@ public class InstagramDevOptionsHook {
         if (isHooked) return;
 
         try {
-            System.loadLibrary("dexkit");
-            DexKitBridge bridge = DexKitBridge.create(lpparam.appInfo.sourceDir);
-            if (bridge != null) {
-                try {
-                    findAndHookDynamicMethod(bridge, lpparam.classLoader);
-                } finally {
+            boolean loaded = DexKitLoader.load(null, FlagSyncXposedEntry.Companion.getModulePath(), FlagSyncXposedEntry.Companion.getModuleLibDir());
+            if (loaded) {
+                DexKitBridge bridge = DexKitBridge.create(lpparam.appInfo.sourceDir);
+                if (bridge != null) {
                     try {
-                        bridge.close();
-                    } catch (Throwable ignored) {}
+                        findAndHookDynamicMethod(bridge, lpparam.classLoader);
+                    } finally {
+                        try {
+                            bridge.close();
+                        } catch (Throwable ignored) {}
+                    }
+                    return;
                 }
-                return;
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": DexKit error: " + t.getMessage() + ", falling back...");

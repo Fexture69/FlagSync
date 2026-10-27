@@ -81,7 +81,33 @@ class FlagSyncXposedEntry : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
                     override fun afterHookedMethod(param: MethodHookParam) {
                         val context = param.args[0] as? Context ?: return
-                        // Launch DexKit scan and hook installation in a dedicated background thread
+                        val app = param.thisObject as? Application
+
+                        // 1. Immediately register the internal receiver right here in Application.attach
+                        try {
+                            InstagramHookReceiver.register(context)
+                        } catch (t: Throwable) {
+                            XposedBridge.log("$TAG: ❌ Error registering InstagramHookReceiver: ${t.message}")
+                        }
+
+                        // 2. Register ActivityLifecycleCallbacks for the confirmation status card
+                        try {
+                            app?.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
+                                override fun onActivityResumed(activity: Activity) {
+                                    FlagSyncHookStatus.showStatusOverlay(activity)
+                                }
+                                override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+                                override fun onActivityStarted(activity: Activity) {}
+                                override fun onActivityPaused(activity: Activity) {}
+                                override fun onActivityStopped(activity: Activity) {}
+                                override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+                                override fun onActivityDestroyed(activity: Activity) {}
+                            })
+                        } catch (t: Throwable) {
+                            XposedBridge.log("$TAG: ❌ Error registering ActivityLifecycleCallbacks: ${t.message}")
+                        }
+
+                        // 3. Launch DexKit scan and hook installation in a dedicated background thread
                         Thread {
                             try {
                                 val loaded = DexKitLoader.load(context, modulePath, moduleLibDir)
@@ -114,34 +140,6 @@ class FlagSyncXposedEntry : IXposedHookLoadPackage, IXposedHookZygoteInit {
             )
         } catch (t: Throwable) {
             XposedBridge.log("$TAG: ❌ Failed to hook Application.attach: ${t.message}")
-        }
-
-        // 2. Hook Application.onCreate to register receiver and status toast listener
-        try {
-            XposedHelpers.findAndHookMethod(
-                Application::class.java,
-                "onCreate",
-                object : XC_MethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        val app = param.thisObject as? Application ?: return
-                        InstagramHookReceiver.register(app)
-
-                        app.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
-                            override fun onActivityResumed(activity: Activity) {
-                                FlagSyncHookStatus.showStatusOverlay(activity)
-                            }
-                            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
-                            override fun onActivityStarted(activity: Activity) {}
-                            override fun onActivityPaused(activity: Activity) {}
-                            override fun onActivityStopped(activity: Activity) {}
-                            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
-                            override fun onActivityDestroyed(activity: Activity) {}
-                        })
-                    }
-                }
-            )
-        } catch (t: Throwable) {
-            XposedBridge.log("$TAG: ❌ Failed to hook Application.onCreate: ${t.message}")
         }
     }
 }
