@@ -47,6 +47,48 @@
     <string name="compare_action_remove_all">Undo all</string>
     <string name="compare_action_restore_all">Restore all</string>
 
+    <!-- Flag Actions -->
+    <string name="flag_action_add_single">Add flag</string>
+    <string name="flag_action_delete_all_except">Delete all except…</string>
+    <string name="flag_action_delete_all">Delete all</string>
+
+    <!-- Add Flag Dialog -->
+    <string name="add_flag_title">Add Flag</string>
+    <string name="add_flag_path_label">Flag path / key</string>
+    <string name="add_flag_path_placeholder">e.g. stories:enable_super_zoom</string>
+    <string name="add_flag_type_label">VALUE TYPE</string>
+    <string name="add_flag_type_boolean">Boolean</string>
+    <string name="add_flag_type_string">String</string>
+    <string name="add_flag_type_number">Number</string>
+    <string name="add_flag_type_array">JSON Array</string>
+    <string name="add_flag_value_label">Value</string>
+    <string name="add_flag_value_placeholder">Enter value…</string>
+    <string name="add_flag_exists_warning">This flag already exists and will be updated with the new value.</string>
+    <string name="add_flag_confirm">Add Flag</string>
+    <string name="add_flag_error_invalid_number">Please enter a valid number</string>
+    <string name="add_flag_error_invalid_json">Invalid JSON array syntax</string>
+
+    <!-- Delete All Dialog -->
+    <string name="delete_all_title">Delete all flags?</string>
+    <string name="delete_all_message">Are you sure you want to delete all %1$d flags from Backup %2$s? You can review or restore them before saving.</string>
+    <string name="delete_all_confirm">Delete All</string>
+
+    <!-- Delete All Except Dialog -->
+    <string name="delete_all_except_title">Delete All Except…</string>
+    <string name="delete_all_except_description">Enter the keywords or flag paths to KEEP. All other flags will be deleted.</string>
+    <string name="delete_all_except_input_label">Keywords or paths to keep</string>
+    <string name="delete_all_except_input_placeholder">e.g. stories, direct, feed:reels</string>
+    <string name="delete_all_except_use_search">Use active search query</string>
+    <string name="delete_all_except_match_mode">MATCH MODE</string>
+    <string name="delete_all_except_match_contains">Contains</string>
+    <string name="delete_all_except_match_exact">Exact</string>
+    <string name="delete_all_except_match_starts_with">Starts with</string>
+    <string name="delete_all_except_include_mapping">Match against display names</string>
+    <string name="delete_all_except_preview_keep">Keep: %1$d</string>
+    <string name="delete_all_except_preview_delete">Delete: %1$d</string>
+    <string name="delete_all_except_confirm">Keep %1$d &amp; Delete %2$d</string>
+    <string name="delete_all_except_empty_warning">No flags match the filter. All %1$d flags will be deleted!</string>
+
     <!-- Converter Screen -->
     <string name="converter_eyebrow">convert</string>
     <string name="converter_title">Convert .ibackup → .json</string>

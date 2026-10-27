@@ -148,6 +148,10 @@ private fun UnifiedCompare(
     var showBulkRestoreDialog by remember { mutableStateOf(false) }
     var showChangelogDialog by remember { mutableStateOf(false) }
     var changelogLimitEnabled by remember { mutableStateOf(true) }
+    var showAddFlagDialog by remember { mutableStateOf(false) }
+    var showDeleteAllDialog by remember { mutableStateOf(false) }
+    var showDeleteAllExceptDialog by remember { mutableStateOf(false) }
+    var activeFlagSource by remember { mutableStateOf('A') }
     var showEditDialog by remember { mutableStateOf(false) }
     var editingFlagPath by remember { mutableStateOf("") }
     var editingFlagDisplayName by remember { mutableStateOf("") }
@@ -823,6 +827,22 @@ private fun UnifiedCompare(
                                 SearchFilterRow(currentScope = vm.searchScopeA, onScopeChange = { vm.updateSearchScopeA(it) }, accentColor = accents.teal, modifier = Modifier.weight(1f))
                                 groupingToggle(vm.isGroupingSingleA, { vm.toggleGroupingSingleA() }, accents.teal)
                             }
+                            FlagActionRow(
+                                accentColor = accents.teal,
+                                onAddFlag = {
+                                    activeFlagSource = 'A'
+                                    showAddFlagDialog = true
+                                },
+                                onDeleteAllExcept = {
+                                    activeFlagSource = 'A'
+                                    showDeleteAllExceptDialog = true
+                                },
+                                onDeleteAll = {
+                                    activeFlagSource = 'A'
+                                    showDeleteAllDialog = true
+                                },
+                                flagsCount = vm.flatA?.size ?: 0
+                            )
                         }
                     }
                     if (vm.isGroupingSingleA) {
@@ -932,6 +952,22 @@ private fun UnifiedCompare(
                                     SearchFilterRow(currentScope = vm.searchScopeA, onScopeChange = { vm.updateSearchScopeA(it) }, accentColor = accents.teal, modifier = Modifier.weight(1f))
                                     groupingToggle(vm.isGroupingSingleA, { vm.toggleGroupingSingleA() }, accents.teal)
                                 }
+                                FlagActionRow(
+                                    accentColor = accents.teal,
+                                    onAddFlag = {
+                                        activeFlagSource = 'A'
+                                        showAddFlagDialog = true
+                                    },
+                                    onDeleteAllExcept = {
+                                        activeFlagSource = 'A'
+                                        showDeleteAllExceptDialog = true
+                                    },
+                                    onDeleteAll = {
+                                        activeFlagSource = 'A'
+                                        showDeleteAllDialog = true
+                                    },
+                                    flagsCount = vm.flatA?.size ?: 0
+                                )
                             }
                         }
                         if (vm.isGroupingSingleA) {
@@ -1020,6 +1056,22 @@ private fun UnifiedCompare(
                                     SearchFilterRow(currentScope = vm.searchScopeB, onScopeChange = { vm.updateSearchScopeB(it) }, accentColor = accents.amber, modifier = Modifier.weight(1f))
                                     groupingToggle(vm.isGroupingSingleB, { vm.toggleGroupingSingleB() }, accents.amber)
                                 }
+                                FlagActionRow(
+                                    accentColor = accents.amber,
+                                    onAddFlag = {
+                                        activeFlagSource = 'B'
+                                        showAddFlagDialog = true
+                                    },
+                                    onDeleteAllExcept = {
+                                        activeFlagSource = 'B'
+                                        showDeleteAllExceptDialog = true
+                                    },
+                                    onDeleteAll = {
+                                        activeFlagSource = 'B'
+                                        showDeleteAllDialog = true
+                                    },
+                                    flagsCount = vm.flatB?.size ?: 0
+                                )
                             }
                         }
                         if (vm.isGroupingSingleB) {
@@ -1390,6 +1442,60 @@ private fun UnifiedCompare(
                     showEditDialog = false
                 },
                 sessionOriginalValue = editingFlagOriginalValue
+            )
+        }
+
+        if (showAddFlagDialog) {
+            val flags = if (activeFlagSource == 'A') vm.flatA else vm.flatB
+            AddFlagDialog(
+                existingFlags = flags,
+                targetSource = activeFlagSource,
+                onDismiss = { showAddFlagDialog = false },
+                onSave = { path, value ->
+                    if (activeFlagSource == 'A') {
+                        vm.addFlagA(path, value)
+                    } else {
+                        vm.addFlagB(path, value)
+                    }
+                    showAddFlagDialog = false
+                }
+            )
+        }
+
+        if (showDeleteAllDialog) {
+            val count = if (activeFlagSource == 'A') vm.flatA?.size ?: 0 else vm.flatB?.size ?: 0
+            DeleteAllFlagsDialog(
+                count = count,
+                targetSource = activeFlagSource,
+                onDismiss = { showDeleteAllDialog = false },
+                onConfirm = {
+                    if (activeFlagSource == 'A') {
+                        vm.deleteAllFlagsA()
+                    } else {
+                        vm.deleteAllFlagsB()
+                    }
+                    showDeleteAllDialog = false
+                }
+            )
+        }
+
+        if (showDeleteAllExceptDialog) {
+            val flags = if (activeFlagSource == 'A') vm.flatA else vm.flatB
+            val currentQuery = if (activeFlagSource == 'A') vm.searchSingleA else vm.searchSingleB
+            DeleteAllExceptDialog(
+                flags = flags,
+                mapper = vm.mapper,
+                activeSearchQuery = currentQuery,
+                targetSource = activeFlagSource,
+                onDismiss = { showDeleteAllExceptDialog = false },
+                onConfirm = { predicate ->
+                    if (activeFlagSource == 'A') {
+                        vm.deleteAllFlagsExceptA(predicate)
+                    } else {
+                        vm.deleteAllFlagsExceptB(predicate)
+                    }
+                    showDeleteAllExceptDialog = false
+                }
             )
         }
     }

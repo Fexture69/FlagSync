@@ -473,6 +473,78 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    fun addFlagA(path: String, value: Any?) {
+        val newA = (flatA ?: emptyMap()).toMutableMap()
+        newA[path] = value
+        deletedFlagsA = deletedFlagsA.filter { it.path != path }
+        updateFlatA(newA)
+    }
+
+    fun addFlagB(path: String, value: Any?) {
+        val newB = (flatB ?: emptyMap()).toMutableMap()
+        newB[path] = value
+        deletedFlagsB = deletedFlagsB.filter { it.path != path }
+        updateFlatB(newB)
+    }
+
+    fun deleteAllFlagsA() {
+        val current = flatA ?: return
+        if (current.isEmpty()) return
+        val newDeleted = current.map { FlatFlag(it.key, it.value) }
+        val existingPaths = deletedFlagsA.map { it.path }.toSet()
+        deletedFlagsA = deletedFlagsA + newDeleted.filter { it.path !in existingPaths }
+        updateFlatA(emptyMap())
+    }
+
+    fun deleteAllFlagsB() {
+        val current = flatB ?: return
+        if (current.isEmpty()) return
+        val newDeleted = current.map { FlatFlag(it.key, it.value) }
+        val existingPaths = deletedFlagsB.map { it.path }.toSet()
+        deletedFlagsB = deletedFlagsB + newDeleted.filter { it.path !in existingPaths }
+        updateFlatB(emptyMap())
+    }
+
+    fun deleteAllFlagsExceptA(predicate: (String, Any?) -> Boolean) {
+        val current = flatA ?: return
+        if (current.isEmpty()) return
+        val toKeep = mutableMapOf<String, Any?>()
+        val toDelete = mutableListOf<FlatFlag>()
+        val existingPaths = deletedFlagsA.map { it.path }.toSet()
+
+        current.forEach { (path, value) ->
+            if (predicate(path, value)) {
+                toKeep[path] = value
+            } else {
+                if (path !in existingPaths) {
+                    toDelete.add(FlatFlag(path, value))
+                }
+            }
+        }
+        deletedFlagsA = deletedFlagsA + toDelete
+        updateFlatA(toKeep)
+    }
+
+    fun deleteAllFlagsExceptB(predicate: (String, Any?) -> Boolean) {
+        val current = flatB ?: return
+        if (current.isEmpty()) return
+        val toKeep = mutableMapOf<String, Any?>()
+        val toDelete = mutableListOf<FlatFlag>()
+        val existingPaths = deletedFlagsB.map { it.path }.toSet()
+
+        current.forEach { (path, value) ->
+            if (predicate(path, value)) {
+                toKeep[path] = value
+            } else {
+                if (path !in existingPaths) {
+                    toDelete.add(FlatFlag(path, value))
+                }
+            }
+        }
+        deletedFlagsB = deletedFlagsB + toDelete
+        updateFlatB(toKeep)
+    }
+
     fun removeDeletedFlagA(path: String) {
         val flag = deletedFlagsA.find { it.path == path }
         deletedFlagsA = deletedFlagsA.filter { it.path != path }

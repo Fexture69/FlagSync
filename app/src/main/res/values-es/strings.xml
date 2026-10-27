@@ -48,6 +48,48 @@
     <string name="compare_action_remove_all">Deshacer todas</string>
     <string name="compare_action_restore_all">Restaurar todas</string>
 
+    <!-- Acciones de Flags -->
+    <string name="flag_action_add_single">Añadir flag</string>
+    <string name="flag_action_delete_all_except">Eliminar todo excepto…</string>
+    <string name="flag_action_delete_all">Eliminar todo</string>
+
+    <!-- Añadir Flag Dialog -->
+    <string name="add_flag_title">Añadir Flag</string>
+    <string name="add_flag_path_label">Ruta / clave de la flag</string>
+    <string name="add_flag_path_placeholder">ej: stories:enable_super_zoom</string>
+    <string name="add_flag_type_label">TIPO DE VALOR</string>
+    <string name="add_flag_type_boolean">Booleano</string>
+    <string name="add_flag_type_string">Texto</string>
+    <string name="add_flag_type_number">Número</string>
+    <string name="add_flag_type_array">Array JSON</string>
+    <string name="add_flag_value_label">Valor</string>
+    <string name="add_flag_value_placeholder">Introduce el valor…</string>
+    <string name="add_flag_exists_warning">Esta flag ya existe y se actualizará con el nuevo valor.</string>
+    <string name="add_flag_confirm">Añadir Flag</string>
+    <string name="add_flag_error_invalid_number">Por favor, introduce un número válido</string>
+    <string name="add_flag_error_invalid_json">Sintaxis de array JSON inválida</string>
+
+    <!-- Eliminar Todo Dialog -->
+    <string name="delete_all_title">¿Eliminar todas las flags?</string>
+    <string name="delete_all_message">¿Seguro que deseas eliminar todas las %1$d flags del Backup %2$s? Podrás restaurarlas antes de guardar.</string>
+    <string name="delete_all_confirm">Eliminar Todo</string>
+
+    <!-- Eliminar Todo Excepto Dialog -->
+    <string name="delete_all_except_title">Eliminar Todo Excepto…</string>
+    <string name="delete_all_except_description">Introduce las palabras clave o rutas de flags que deseas CONSERVAR. Todas las demás serán eliminadas.</string>
+    <string name="delete_all_except_input_label">Términos o rutas a conservar</string>
+    <string name="delete_all_except_input_placeholder">ej: stories, direct, feed:reels</string>
+    <string name="delete_all_except_use_search">Usar búsqueda activa</string>
+    <string name="delete_all_except_match_mode">MODO DE COINCIDENCIA</string>
+    <string name="delete_all_except_match_contains">Contiene</string>
+    <string name="delete_all_except_match_exact">Exacto</string>
+    <string name="delete_all_except_match_starts_with">Empieza con</string>
+    <string name="delete_all_except_include_mapping">Coincidir también con nombres mapeados</string>
+    <string name="delete_all_except_preview_keep">Conservar: %1$d</string>
+    <string name="delete_all_except_preview_delete">Eliminar: %1$d</string>
+    <string name="delete_all_except_confirm">Conservar %1$d y Eliminar %2$d</string>
+    <string name="delete_all_except_empty_warning">¡Ninguna flag coincide con el filtro. Se eliminarán todas las %1$d flags!</string>
+
     <!-- Pantalla del Convertidor -->
     <string name="converter_eyebrow">convertir</string>
     <string name="converter_title">Convertir .ibackup → .json</string>
