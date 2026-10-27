@@ -1,0 +1,106 @@
+name: Build APK
+
+"on":
+  push:
+    branches:
+      - master
+      - main
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Latest APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+
+      - name: Make Gradlew Executable
+        run: chmod +x gradlew
+
+      - name: Build APKs
+        run: ./gradlew assembleDebug assembleRelease --stacktrace
+
+      - name: Prepare APK Artifacts
+        id: prepare_apks
+        run: |
+          mkdir -p build_output
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          BUILD_DATE=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          
+          echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
+          echo "COMMIT_MSG=$COMMIT_MSG" >> $GITHUB_ENV
+          echo "BUILD_DATE=$BUILD_DATE" >> $GITHUB_ENV
+
+          # Copy and rename Debug APK
+          if [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
+            cp app/build/outputs/apk/debug/app-debug.apk "build_output/FlagSync-${SHORT_SHA}-debug.apk"
+          fi
+
+          # Copy and rename Release APK
+          if [ -f app/build/outputs/apk/release/app-release.apk ]; then
+            cp app/build/outputs/apk/release/app-release.apk "build_output/FlagSync-${SHORT_SHA}-release.apk"
+          elif [ -f app/build/outputs/apk/release/app-release-unsigned.apk ]; then
+            cp app/build/outputs/apk/release/app-release-unsigned.apk "build_output/FlagSync-${SHORT_SHA}-release-unsigned.apk"
+          fi
+
+          echo "Prepared APK files:"
+          ls -lh build_output/
+
+      - name: Upload APK Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: FlagSync-${{ env.SHORT_SHA }}
+          path: build_output/*
+          retention-days: 30
+
+      - name: Publish or Update Latest Release
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+        uses: softprops/action-gh-release@v2
+        continue-on-error: true
+        with:
+          tag_name: latest
+          name: "FlagSync Latest (${{ env.SHORT_SHA }})"
+          body: |
+            ## FlagSync Latest Build
+            
+            - **Commit:** [${{ env.SHORT_SHA }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+            - **Summary:** ${{ env.COMMIT_MSG }}
+            - **Built:** ${{ env.BUILD_DATE }}
+            
+            ### Included APKs:
+            - **`FlagSync-${{ env.SHORT_SHA }}-release.apk`**: Optimized and minified build.
+            - **`FlagSync-${{ env.SHORT_SHA }}-debug.apk`**: Debug build for development and testing.
+          prerelease: true
+          make_latest: true
+          files: build_output/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
