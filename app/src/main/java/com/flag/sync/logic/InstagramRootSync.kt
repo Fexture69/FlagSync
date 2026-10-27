@@ -8,19 +8,39 @@ package com.flag.sync.logic
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 
 object InstagramRootSync {
 
-    const val IG_PACKAGE = "com.instagram.android"
-    const val IG_CONFIG_PATH = "/data/data/$IG_PACKAGE/files/mobileconfig/mc_overrides.json"
+    const val DEFAULT_IG_PACKAGE = "com.instagram.android"
 
     data class RootResult<T>(
         val isSuccess: Boolean,
         val data: T? = null,
         val errorMessage: String? = null
     )
+
+    /**
+     * Finds the installed Instagram package on the device.
+     */
+    suspend fun getInstalledInstagramPackage(): String = withContext(Dispatchers.IO) {
+        val candidates = listOf(
+            "com.instagram.android",
+            "com.instagram.lite",
+            "paw.instagram.android"
+        )
+        for (pkg in candidates) {
+            try {
+                val p = Runtime.getRuntime().exec(arrayOf("su", "-c", "if [ -d \"/data/data/$pkg\" ]; then echo 1; fi"))
+                val out = p.inputStream.bufferedReader().readText().trim()
+                p.waitFor()
+                if (out == "1") return@withContext pkg
+            } catch (_: Exception) {}
+        }
+        DEFAULT_IG_PACKAGE
+    }
 
     /**
      * Checks whether root (su) is available and functional.
@@ -37,23 +57,97 @@ object InstagramRootSync {
     }
 
     /**
+     * Converts a flat FlagSync map into a strictly valid, flat Instagram mc_overrides.json format.
+     * Guarantees:
+     * 1. Keys are purely numerical with trailing colon: "<id>:" (strips embedded names).
+     * 2. Values are strictly arrays of param strings: ["0: : true", "1: : 50"].
+     * 3. "_qe_overrides_": [] is present so Instagram's C++ MobileConfig parser does not fail.
+     * 4. Dots in values or keys never create unintended nested JSON objects.
+     */
+    fun formatFlagsForInstagram(flat: Map<String, Any?>): String {
+        val root = JSONObject()
+        var hasQeOverrides = false
+
+        for ((key, value) in flat) {
+            if (key == "_qe_overrides_") {
+                hasQeOverrides = true
+                when (value) {
+                    is JSONArray -> root.put("_qe_overrides_", value)
+                    is List<*> -> {
+                        val arr = JSONArray()
+                        value.forEach { arr.put(it) }
+                        root.put("_qe_overrides_", arr)
+                    }
+                    else -> root.put("_qe_overrides_", JSONArray())
+                }
+                continue
+            }
+
+            // Extract pure numerical ID
+            val bare = key.removeSuffix(":")
+            val colonIndex = bare.indexOf(':')
+            val pureId = (if (colonIndex >= 0) bare.substring(0, colonIndex) else bare).trim()
+
+            // Skip invalid non-numeric entries
+            if (pureId.isEmpty() || !pureId.all { it.isDigit() }) continue
+
+            val normalizedKey = "$pureId:"
+
+            when (value) {
+                is JSONArray -> root.put(normalizedKey, value)
+                is List<*> -> {
+                    val arr = JSONArray()
+                    value.forEach { arr.put(it) }
+                    root.put(normalizedKey, arr)
+                }
+                is Map<*, *> -> {
+                    val arr = JSONArray()
+                    for ((pk, pv) in value) {
+                        val pStr = when (pv) {
+                            true -> "true"
+                            false -> "false"
+                            else -> pv.toString()
+                        }
+                        arr.put("$pk: : $pStr")
+                    }
+                    root.put(normalizedKey, arr)
+                }
+                else -> {
+                    val arr = JSONArray()
+                    arr.put(value.toString())
+                    root.put(normalizedKey, arr)
+                }
+            }
+        }
+
+        if (!hasQeOverrides) {
+            root.put("_qe_overrides_", JSONArray())
+        }
+
+        return root.toString()
+    }
+
+    /**
      * Pulls the live mc_overrides.json from Instagram into a raw JSON string.
      */
     suspend fun pullConfig(context: Context): RootResult<String> = withContext(Dispatchers.IO) {
         val tempFile = File(context.cacheDir, "ig_mc_pulled.json")
         try {
+            val pkg = getInstalledInstagramPackage()
+            val configPath = "/data/data/$pkg/files/mobileconfig/mc_overrides.json"
+
             // Check if mc_overrides.json exists in Instagram
-            val checkCmd = "if [ -f \"$IG_CONFIG_PATH\" ]; then echo \"EXISTS\"; else echo \"NOT_FOUND\"; fi"
+            val checkCmd = "if [ -f \"$configPath\" ]; then echo \"EXISTS\"; else echo \"NOT_FOUND\"; fi"
             val checkProc = Runtime.getRuntime().exec(arrayOf("su", "-c", checkCmd))
             val checkOut = checkProc.inputStream.bufferedReader().readText().trim()
             checkProc.waitFor()
 
             if (checkOut != "EXISTS") {
-                return@withContext RootResult(false, null, "mc_overrides.json not found in Instagram.")
+                return@withContext RootResult(false, null, "mc_overrides.json not found in Instagram ($pkg).")
             }
 
             // Copy to app's cache directory and make it readable
-            val copyCmd = "cp \"$IG_CONFIG_PATH\" \"${tempFile.absolutePath}\" && chmod 666 \"${tempFile.absolutePath}\""
+            val copyCmd = "cp \"$configPath\" \"${tempFile.absolutePath}\" && chmod 666 \"${tempFile.absolutePath}\""
             val copyProc = Runtime.getRuntime().exec(arrayOf("su", "-c", copyCmd))
             copyProc.waitFor()
 
@@ -79,7 +173,8 @@ object InstagramRootSync {
     }
 
     /**
-     * Pushes a JSON config string into Instagram's mc_overrides.json, fixes permissions, and restarts Instagram.
+     * Pushes a JSON config string into Instagram's mc_overrides.json, fixes directory ownership,
+     * permissions (chmod 664 / 775), restores SELinux security context, and cold restarts Instagram.
      */
     suspend fun pushConfig(
         context: Context,
@@ -93,17 +188,29 @@ object InstagramRootSync {
 
             tempFile.writeText(jsonContent, Charsets.UTF_8)
 
-            val dir = "/data/data/$IG_PACKAGE/files/mobileconfig"
+            val pkg = getInstalledInstagramPackage()
+            val dir = "/data/data/$pkg/files/mobileconfig"
             val target = "$dir/mc_overrides.json"
 
             val script = buildString {
                 append("mkdir -p \"$dir\"\n")
                 append("cp \"${tempFile.absolutePath}\" \"$target\"\n")
-                append("IG_UID=\$(stat -c '%u' /data/data/$IG_PACKAGE 2>/dev/null || echo 10000)\n")
-                append("chown \$IG_UID:\$IG_UID \"$target\"\n")
-                append("chmod 600 \"$target\"\n")
+                append("IG_UID=\$(stat -c '%u' \"/data/data/$pkg\" 2>/dev/null || echo 10000)\n")
+                append("IG_GID=\$(stat -c '%g' \"/data/data/$pkg\" 2>/dev/null || echo 10000)\n")
+                // Recursive chown for the mobileconfig folder and file
+                append("chown -R \$IG_UID:\$IG_GID \"$dir\"\n")
+                append("chmod 775 \"$dir\"\n")
+                append("chmod 664 \"$target\"\n")
+                // Restore SELinux contexts so untrusted_app is not blocked
+                append("restorecon -RF \"$dir\" 2>/dev/null || true\n")
+                append("chcon -R --reference=\"/data/data/$pkg/files\" \"$dir\" 2>/dev/null || true\n")
+                // Clear stale app cache
+                append("rm -rf \"/data/data/$pkg/cache/\"* 2>/dev/null || true\n")
+                // Complete process kill & restart
                 if (autoRestart) {
-                    append("am force-stop $IG_PACKAGE\n")
+                    append("killall -9 \"$pkg\" 2>/dev/null || true\n")
+                    append("pkill -9 -f \"$pkg\" 2>/dev/null || true\n")
+                    append("am force-stop \"$pkg\"\n")
                 }
             }
 
@@ -133,10 +240,15 @@ object InstagramRootSync {
      */
     suspend fun clearConfig(autoRestart: Boolean = true): RootResult<Unit> = withContext(Dispatchers.IO) {
         try {
+            val pkg = getInstalledInstagramPackage()
+            val configPath = "/data/data/$pkg/files/mobileconfig/mc_overrides.json"
             val script = buildString {
-                append("rm -f \"$IG_CONFIG_PATH\"\n")
+                append("rm -f \"$configPath\"\n")
+                append("rm -rf \"/data/data/$pkg/cache/\"* 2>/dev/null || true\n")
                 if (autoRestart) {
-                    append("am force-stop $IG_PACKAGE\n")
+                    append("killall -9 \"$pkg\" 2>/dev/null || true\n")
+                    append("pkill -9 -f \"$pkg\" 2>/dev/null || true\n")
+                    append("am force-stop \"$pkg\"\n")
                 }
             }
             val process = Runtime.getRuntime().exec(arrayOf("su", "-c", script))
@@ -152,11 +264,13 @@ object InstagramRootSync {
     }
 
     /**
-     * Forces Instagram to stop via am force-stop.
+     * Forces Instagram to stop via am force-stop and pkill.
      */
     suspend fun restartInstagram(): RootResult<Unit> = withContext(Dispatchers.IO) {
         try {
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "am force-stop $IG_PACKAGE"))
+            val pkg = getInstalledInstagramPackage()
+            val script = "killall -9 \"$pkg\" 2>/dev/null; pkill -9 -f \"$pkg\" 2>/dev/null; am force-stop \"$pkg\""
+            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", script))
             process.waitFor()
             RootResult(true, Unit, null)
         } catch (e: Exception) {

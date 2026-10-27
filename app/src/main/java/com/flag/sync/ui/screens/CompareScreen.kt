@@ -1673,7 +1673,7 @@ private fun UnifiedCompare(
                         val data = if (applyRootTargetSource == 'A') vm.flatA else vm.flatB
                         if (data == null) return@launch
                         val jsonStr = withContext(Dispatchers.Default) {
-                            JsonDiff.unflattenAndSerializeCompact(data)
+                            InstagramRootSync.formatFlagsForInstagram(data)
                         }
                         val result = InstagramRootSync.pushConfig(context, jsonStr, autoRestart)
                         if (result.isSuccess) {
