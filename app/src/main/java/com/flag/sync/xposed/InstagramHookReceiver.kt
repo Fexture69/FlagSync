@@ -106,14 +106,23 @@ object InstagramHookReceiver {
                     ACTION_EXPORT_CONFIG -> {
                         try {
                             val source = File(ctx.filesDir, "mobileconfig/mc_overrides.json")
-                            val content = if (source.exists()) source.readText(StandardCharsets.UTF_8) else "{}"
+                            val fileExists = source.exists() && source.length() > 0
+                            val content = if (fileExists) source.readText(StandardCharsets.UTF_8).trim() else "{}"
                             val reply = Intent(ACTION_CONFIG_EXPORTED).apply {
                                 setPackage("com.flag.sync")
                                 putExtra("json_content", content)
+                                putExtra("exists", fileExists)
                             }
                             ctx.sendBroadcast(reply)
+                            XposedBridge.log("FlagSyncXposed: Exported mc_overrides.json (exists=$fileExists, size=${content.length}) to FlagSync")
                         } catch (e: Exception) {
                             XposedBridge.log("FlagSyncXposed: Export failed: ${e.message}")
+                            val errorReply = Intent(ACTION_CONFIG_EXPORTED).apply {
+                                setPackage("com.flag.sync")
+                                putExtra("json_content", "{}")
+                                putExtra("error", e.message)
+                            }
+                            ctx.sendBroadcast(errorReply)
                         }
                     }
 
@@ -145,6 +154,12 @@ object InstagramHookReceiver {
                                 InstagramQualityHooks.syncHdrOverrides(ctx)
                                 XposedBridge.log("FlagSyncXposed: Updated spoofDevice = $v")
                             }
+                            "show_hook_status_toast" -> {
+                                val v = intent.getBooleanExtra("bool_val", true)
+                                FlagSyncHookStatus.showStatusToast = v
+                                InstagramQualityHooks.saveCache(ctx)
+                                XposedBridge.log("FlagSyncXposed: Updated showStatusToast = $v")
+                            }
                         }
                     }
                 }
@@ -165,6 +180,7 @@ object InstagramHookReceiver {
                 context.registerReceiver(receiver, filter)
             }
             isRegistered = true
+            FlagSyncHookStatus.isReceiverReady = true
             XposedBridge.log("FlagSyncXposed: ✅ Internal hook receiver registered in ${context.packageName}")
         } catch (e: Throwable) {
             XposedBridge.log("FlagSyncXposed: ❌ Error registering receiver: ${e.message}")

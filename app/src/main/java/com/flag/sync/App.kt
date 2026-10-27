@@ -126,6 +126,9 @@ fun FlagSyncApp(mainViewModel: MainViewModel = viewModel()) {
     var spoofDevice by remember {
         mutableStateOf(prefs.getString("spoof_device", "") ?: "")
     }
+    var showHookStatusToast by remember {
+        mutableStateOf(prefs.getBoolean("show_hook_status_toast", true))
+    }
 
     // Feature Tour State
     var isTourSeen by remember { mutableStateOf(prefs.getBoolean("tour_seen", false)) }
@@ -439,6 +442,13 @@ fun FlagSyncApp(mainViewModel: MainViewModel = viewModel()) {
                                     broadcastQualityUpdate(context, "spoof_device", strVal = value)
                                 }
                             }
+                            val onShowHookStatusToastChangeS = remember {
+                                { value: Boolean ->
+                                    showHookStatusToast = value
+                                    prefs.edit().putBoolean("show_hook_status_toast", value).apply()
+                                    broadcastQualityUpdate(context, "show_hook_status_toast", boolVal = value)
+                                }
+                            }
 
                             SettingsScreen(
                                 appTheme = appTheme,
@@ -463,6 +473,8 @@ fun FlagSyncApp(mainViewModel: MainViewModel = viewModel()) {
                                 onMaxUploadQualityChange = onMaxUploadQualityChangeS,
                                 spoofDevice = spoofDevice,
                                 onSpoofDeviceChange = onSpoofDeviceChangeS,
+                                showHookStatusToast = showHookStatusToast,
+                                onShowHookStatusToastChange = onShowHookStatusToastChangeS,
                                 autoCheckMappingUpdates = autoCheckMappingUpdates,
                                 onAutoCheckMappingUpdatesChange = onAutoCheckMappingUpdatesChangeS,
                                 mappingUpdateAvailable = mainViewModel.mappingUpdateAvailable,

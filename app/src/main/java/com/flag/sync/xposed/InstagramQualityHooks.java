@@ -116,6 +116,7 @@ public class InstagramQualityHooks {
                 highResolutionImages = obj.optBoolean("highResolutionImages", false);
                 maxUploadQuality = obj.optBoolean("maxUploadQuality", false);
                 spoofDevice = obj.optString("spoofDevice", "");
+                FlagSyncHookStatus.showStatusToast = obj.optBoolean("showStatusToast", true);
                 XposedBridge.log(TAG + ": Loaded quality settings from local cache: reels=" + forceReelQuality
                         + ", highRes=" + highResolutionImages + ", maxUpload=" + maxUploadQuality + ", spoof=" + spoofDevice);
                 return;
@@ -134,6 +135,7 @@ public class InstagramQualityHooks {
                 highResolutionImages = xPrefs.getBoolean("high_res_images", false);
                 maxUploadQuality = xPrefs.getBoolean("max_upload_quality", false);
                 spoofDevice = xPrefs.getString("spoof_device", "");
+                FlagSyncHookStatus.showStatusToast = xPrefs.getBoolean("show_hook_status_toast", true);
                 XposedBridge.log(TAG + ": Loaded quality settings from XSharedPreferences");
                 saveCache(context);
             }
@@ -150,6 +152,7 @@ public class InstagramQualityHooks {
             obj.put("highResolutionImages", highResolutionImages);
             obj.put("maxUploadQuality", maxUploadQuality);
             obj.put("spoofDevice", spoofDevice != null ? spoofDevice : "");
+            obj.put("showStatusToast", FlagSyncHookStatus.showStatusToast);
 
             File tmp = new File(cacheFile.getPath() + ".tmp");
             try (FileOutputStream fos = new FileOutputStream(tmp)) {
@@ -210,6 +213,7 @@ public class InstagramQualityHooks {
                 XposedHelpers.findAndHookMethod(pm, "hasSystemFeature", String.class, featureHook);
                 XposedHelpers.findAndHookMethod(pm, "hasSystemFeature", String.class, int.class, featureHook);
             }
+            FlagSyncHookStatus.isDeviceSpoofed = true;
             XposedBridge.log(TAG + ": ✅ Spoofed device: " + p.manufacturer + " " + p.model);
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": ❌ Device spoof error: " + t.getMessage());
@@ -381,6 +385,7 @@ public class InstagramQualityHooks {
                 } catch (Throwable ignored) {}
             }
             if (hooked > 0) {
+                FlagSyncHookStatus.isHighResHooked = true;
                 XposedBridge.log(TAG + ": ✅ Hooked " + hooked + " High-Resolution Image picker(s)");
             }
         } catch (Throwable t) {
@@ -412,6 +417,7 @@ public class InstagramQualityHooks {
                 } catch (Throwable ignored) {}
             }
             if (hooked > 0) {
+                FlagSyncHookStatus.isMaxUploadHooked = true;
                 XposedBridge.log(TAG + ": ✅ Hooked " + hooked + " Max Upload Quality getter(s)");
             }
         } catch (Throwable t) {
@@ -485,6 +491,7 @@ public class InstagramQualityHooks {
                     }
                 }
             });
+            FlagSyncHookStatus.isForceReelHooked = true;
             XposedBridge.log(TAG + ": ✅ Hooked Force Reel Quality on " + videoVersionsGetter.getDeclaringClass().getName());
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": ❌ Force Reel Quality install error: " + t.getMessage());

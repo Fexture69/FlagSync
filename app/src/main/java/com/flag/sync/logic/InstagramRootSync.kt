@@ -5,9 +5,15 @@
 
 package com.flag.sync.logic
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -128,12 +134,70 @@ object InstagramRootSync {
     }
 
     /**
+     * Attempts to pull the config without requiring root using the Xposed broadcast bridge.
+     */
+    private suspend fun pullConfigViaBroadcast(context: Context, pkg: String): String? = withContext(Dispatchers.Main) {
+        val deferred = CompletableDeferred<String?>()
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(c: Context?, intent: Intent?) {
+                val json = intent?.getStringExtra("json_content")
+                if (!deferred.isCompleted) {
+                    deferred.complete(json)
+                }
+            }
+        }
+        val filter = IntentFilter("com.flag.sync.ACTION_CONFIG_EXPORTED")
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
+            } else {
+                context.registerReceiver(receiver, filter)
+            }
+        } catch (_: Exception) {
+            return@withContext null
+        }
+
+        try {
+            val exportIntent = Intent("com.flag.sync.ACTION_EXPORT_CONFIG").apply {
+                setPackage(pkg)
+            }
+            context.sendBroadcast(exportIntent)
+            withTimeoutOrNull(900L) {
+                deferred.await()
+            }
+        } catch (_: Exception) {
+            null
+        } finally {
+            try {
+                context.unregisterReceiver(receiver)
+            } catch (_: Exception) {}
+        }
+    }
+
+    /**
      * Pulls the live mc_overrides.json from Instagram into a raw JSON string.
+     * Uses 2 tiers:
+     * 1. Xposed broadcast bridge (instant, no root needed if Instagram is running)
+     * 2. Root su file copy (if broadcast times out or Instagram isn't running)
+     * If no overrides file exists on disk yet, returns a clean empty JSON ("{}").
      */
     suspend fun pullConfig(context: Context): RootResult<String> = withContext(Dispatchers.IO) {
+        val pkg = getInstalledInstagramPackage()
+
+        // Tier 1: Try broadcast from hooked Instagram process
+        try {
+            val broadcastConfig = pullConfigViaBroadcast(context, pkg)
+            if (broadcastConfig != null && broadcastConfig.isNotBlank()) {
+                try {
+                    JSONObject(broadcastConfig)
+                    return@withContext RootResult(true, broadcastConfig, null)
+                } catch (_: Exception) {}
+            }
+        } catch (_: Exception) {}
+
+        // Tier 2: Root su copy
         val tempFile = File(context.cacheDir, "ig_mc_pulled.json")
         try {
-            val pkg = getInstalledInstagramPackage()
             val configPath = "/data/data/$pkg/files/mobileconfig/mc_overrides.json"
 
             // Check if mc_overrides.json exists in Instagram
@@ -143,7 +207,8 @@ object InstagramRootSync {
             checkProc.waitFor()
 
             if (checkOut != "EXISTS") {
-                return@withContext RootResult(false, null, "mc_overrides.json not found in Instagram ($pkg).")
+                // If mc_overrides.json does not exist yet in Instagram, return clean empty state
+                return@withContext RootResult(true, "{}", null)
             }
 
             // Copy to app's cache directory and make it readable

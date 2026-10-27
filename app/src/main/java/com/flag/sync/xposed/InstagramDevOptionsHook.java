@@ -261,6 +261,7 @@ public class InstagramDevOptionsHook {
                 }
             });
             isHooked = true;
+            FlagSyncHookStatus.isDevOptionsHooked = true;
             XposedBridge.log(TAG + ": ✅ Developer Options unlocked via: " + m.getDeclaringClass().getName() + "." + m.getName());
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": ❌ Failed to hook exact method: " + t.getMessage());

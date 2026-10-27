@@ -314,4 +314,9 @@
     <string name="spoof_device_s26">Galaxy S26 Ultra</string>
     <string name="spoof_device_pixel">Pixel 11 Pro XL</string>
     <string name="spoof_device_toast">Restart Instagram to apply device spoofing and HDR video flags.</string>
+    <string name="settings_show_hook_status_title">Show Hook Status in Instagram</string>
+    <string name="settings_show_hook_status_subtitle">Displays on-screen confirmation card inside Instagram when active</string>
+    <string name="settings_dev_options_status_title">Instagram Developer Options</string>
+    <string name="settings_dev_options_status_subtitle">Unlocked via Xposed. Long-press Home icon in Instagram to access.</string>
+    <string name="settings_dev_options_active">Unlocked</string>
 </resources>

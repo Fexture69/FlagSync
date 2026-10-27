@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -102,6 +103,8 @@ fun SettingsScreen(
     onMaxUploadQualityChange: (Boolean) -> Unit = {},
     spoofDevice: String = "",
     onSpoofDeviceChange: (String) -> Unit = {},
+    showHookStatusToast: Boolean = true,
+    onShowHookStatusToastChange: (Boolean) -> Unit = {},
     onRestartTour: () -> Unit,
     listState: androidx.compose.foundation.lazy.LazyListState = rememberLazyListState(),
 ) {
@@ -137,382 +140,373 @@ fun SettingsScreen(
                 }
             }
 
-            // --- SEÇÃO DE APARÊNCIA UNIFICADA PARA ESTABILIDADE ---
+            // --- 1. APARÊNCIA ---
             item {
-                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) {
-                    // Título Temas
-                    Text(
-                        text = stringResource(R.string.settings_theme_label),
-                        fontFamily = MonoFamily,
-                        fontSize = 11.sp,
-                        color = accents.textMuted,
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
+                SettingsSection(title = stringResource(R.string.settings_theme_label)) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            AppTheme.entries.forEach { theme ->
+                                ThemeOptionCard(
+                                    theme = theme,
+                                    isSelected = appTheme == theme,
+                                    onSelect = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        onThemeChange(theme)
+                                        if (theme == AppTheme.LIGHT) {
+                                            val currentTime = System.currentTimeMillis()
+                                            if (currentTime - lastSecretClickTime > 800) {
+                                                secretClickCount = 1
+                                            } else {
+                                                secretClickCount++
+                                            }
+                                            lastSecretClickTime = currentTime
 
-                    // Grade de Temas
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        AppTheme.entries.forEach { theme ->
-                            ThemeOptionCard(
-                                theme = theme,
-                                isSelected = appTheme == theme,
-                                onSelect = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    onThemeChange(theme)
-                                    if (theme == AppTheme.LIGHT) {
-                                        val currentTime = System.currentTimeMillis()
-                                        if (currentTime - lastSecretClickTime > 800) {
-                                            secretClickCount = 1
+                                            if (secretClickCount >= 10) {
+                                                val nextState = !isUnlocked
+                                                onUnlockedChange(nextState)
+                                                secretClickCount = 0
+
+                                                if (!nextState) {
+                                                    Toast.makeText(context, context.getString(R.string.settings_secret_locked), Toast.LENGTH_LONG).show()
+                                                } else {
+                                                    Toast.makeText(context, context.getString(R.string.settings_secret_unlocked), Toast.LENGTH_LONG).show()
+                                                }
+                                            }
                                         } else {
-                                            secretClickCount++
-                                        }
-                                        lastSecretClickTime = currentTime
-
-                                        if (secretClickCount >= 10) {
-                                            val nextState = !isUnlocked
-                                            onUnlockedChange(nextState)
                                             secretClickCount = 0
-
-                                            if (!nextState) {
-                                                Toast.makeText(context, context.getString(R.string.settings_secret_locked), Toast.LENGTH_LONG).show()
-                                            } else {
-                                                Toast.makeText(context, context.getString(R.string.settings_secret_unlocked), Toast.LENGTH_LONG).show()
-                                            }
                                         }
-                                    } else {
-                                        secretClickCount = 0
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+
+                        AnimatedVisibility(
+                            visible = appTheme == AppTheme.DARK,
+                            enter = expandVertically() + fadeIn(),
+                            exit = shrinkVertically() + fadeOut()
+                        ) {
+                            Column {
+                                Spacer(modifier = Modifier.height(10.dp))
+                                RowDivider()
+                                CompactSettingRow(
+                                    title = stringResource(R.string.settings_amoled_title),
+                                    subtitle = stringResource(R.string.settings_amoled_subtitle),
+                                    checked = isAmoledMode,
+                                    onCheckedChange = onAmoledModeChange,
+                                    icon = Icons.Rounded.DarkMode
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Text(
+                            text = stringResource(R.string.settings_palette_label),
+                            fontFamily = MonoFamily,
+                            fontSize = 11.sp,
+                            color = accents.textMuted,
+                            modifier = Modifier.padding(bottom = 10.dp)
+                        )
+
+                        var showPicker by remember { mutableStateOf(false) }
+                        val allPalettes = AccentPalette.entries.filter {
+                            it != AccentPalette.MATERIAL_YOU || Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                        }
+
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            allPalettes.chunked(3).forEach { rowItems ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    rowItems.forEach { palette ->
+                                        PaletteOptionCard(
+                                            palette = palette,
+                                            isSelected = accentPalette == palette,
+                                            customColor = if (palette == AccentPalette.CUSTOM) customColorHex else null,
+                                            onSelect = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                if (palette == AccentPalette.CUSTOM && accentPalette == AccentPalette.CUSTOM) {
+                                                    showPicker = true
+                                                } else {
+                                                    onAccentPaletteChange(palette)
+                                                }
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        )
                                     }
-                                },
-                                modifier = Modifier.weight(1f)
+                                    repeat(3 - rowItems.size) {
+                                        Spacer(modifier = Modifier.weight(1f))
+                                    }
+                                }
+                            }
+                        }
+
+                        if (showPicker) {
+                            ColorPickerDialog(
+                                initialColor = customColorHex,
+                                onDismiss = { showPicker = false },
+                                onColorSelected = {
+                                    onCustomColorChange(it)
+                                    showPicker = false
+                                }
                             )
                         }
                     }
+                }
+            }
 
-                    // AMOLED Switch (Com animação interna estável)
-                    AnimatedVisibility(
-                        visible = appTheme == AppTheme.DARK,
-                        enter = expandVertically() + fadeIn(),
-                        exit = shrinkVertically() + fadeOut()
-                    ) {
-                        Column {
-                            Spacer(modifier = Modifier.height(12.dp))
-                            SettingRow(
-                                title = stringResource(R.string.settings_amoled_title),
-                                subtitle = stringResource(R.string.settings_amoled_subtitle),
-                                checked = isAmoledMode,
-                                onCheckedChange = onAmoledModeChange
-                            )
+            // --- 2. INSTAGRAM & XPOSED ---
+            item {
+                SettingsSection(title = stringResource(R.string.settings_quality_label)) {
+                    // Developer options indicator
+                    CompactClickableRow(
+                        title = stringResource(R.string.settings_dev_options_status_title),
+                        subtitle = stringResource(R.string.settings_dev_options_status_subtitle),
+                        icon = Icons.Rounded.Terminal,
+                        badgeText = stringResource(R.string.settings_dev_options_active),
+                        onClick = {
+                            Toast.makeText(
+                                context,
+                                "Dev Options are unlocked via Xposed. In Instagram, long-press the bottom-left Home icon to enter Developer Settings.",
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
+                    )
+                    RowDivider()
+
+                    // Confirmation toast card in Instagram
+                    CompactSettingRow(
+                        title = stringResource(R.string.settings_show_hook_status_title),
+                        subtitle = stringResource(R.string.settings_show_hook_status_subtitle),
+                        checked = showHookStatusToast,
+                        onCheckedChange = onShowHookStatusToastChange,
+                        icon = Icons.Rounded.Visibility
+                    )
+                    RowDivider()
+
+                    // Force Reels Quality
+                    val qualityLabel = when (forceReelQuality) {
+                        360 -> stringResource(R.string.quality_360)
+                        480 -> stringResource(R.string.quality_480)
+                        720 -> stringResource(R.string.quality_720)
+                        1080 -> stringResource(R.string.quality_1080)
+                        Int.MAX_VALUE -> stringResource(R.string.quality_max)
+                        else -> stringResource(R.string.quality_auto)
+                    }
+                    CompactClickableRow(
+                        title = stringResource(R.string.settings_force_reels_quality_title),
+                        subtitle = stringResource(R.string.settings_force_reels_quality_subtitle),
+                        icon = Icons.Rounded.Movie,
+                        badgeText = qualityLabel,
+                        onClick = { showReelQualityDialog = true }
+                    )
+                    RowDivider()
+
+                    // Load highest resolution images
+                    CompactSettingRow(
+                        title = stringResource(R.string.settings_high_res_images_title),
+                        subtitle = stringResource(R.string.settings_high_res_images_subtitle),
+                        checked = highResImages,
+                        onCheckedChange = onHighResImagesChange,
+                        icon = Icons.Rounded.Image
+                    )
+                    RowDivider()
+
+                    // Always upload at highest quality
+                    CompactSettingRow(
+                        title = stringResource(R.string.settings_max_upload_quality_title),
+                        subtitle = stringResource(R.string.settings_max_upload_quality_subtitle),
+                        checked = maxUploadQuality,
+                        onCheckedChange = onMaxUploadQualityChange,
+                        icon = Icons.Rounded.Upload
+                    )
+                    RowDivider()
+
+                    // Spoof Device
+                    val deviceLabel = when (spoofDevice) {
+                        "s26" -> stringResource(R.string.spoof_device_s26)
+                        "pixel" -> stringResource(R.string.spoof_device_pixel)
+                        else -> stringResource(R.string.spoof_device_off)
+                    }
+                    CompactClickableRow(
+                        title = stringResource(R.string.settings_spoof_device_title),
+                        subtitle = stringResource(R.string.settings_spoof_device_subtitle),
+                        icon = Icons.Rounded.PhoneAndroid,
+                        badgeText = deviceLabel,
+                        onClick = { showSpoofDeviceDialog = true }
+                    )
+                }
+            }
+
+            // --- 3. CONFIGURAÇÕES GERAIS ---
+            item {
+                SettingsSection(title = stringResource(R.string.category_general)) {
+                    val currentLangLabel = when {
+                        currentLanguage.isEmpty() -> stringResource(R.string.settings_lang_system) + " (${LocaleUtils.getSystemLanguageName(context)})"
+                        currentLanguage.startsWith("pt") -> stringResource(R.string.settings_lang_pt)
+                        currentLanguage.startsWith("es") -> stringResource(R.string.settings_lang_es)
+                        else -> stringResource(R.string.settings_lang_en)
+                    }
+                    val currentLangBadge = when {
+                        currentLanguage.startsWith("pt") -> "🇧🇷 PT"
+                        currentLanguage.startsWith("es") -> "🇪🇸 ES"
+                        currentLanguage.startsWith("en") -> "🇺🇸 EN"
+                        else -> "🌐 Auto"
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    CompactClickableRow(
+                        title = stringResource(R.string.settings_language_label),
+                        subtitle = currentLangLabel,
+                        icon = Icons.Rounded.Language,
+                        badgeText = currentLangBadge,
+                        onClick = { showLanguageSheet = true }
+                    )
+                    RowDivider()
 
-                    // Título Paleta
-                    Text(
-                        text = stringResource(R.string.settings_palette_label),
-                        fontFamily = MonoFamily,
-                        fontSize = 11.sp,
-                        color = accents.textMuted,
-                        modifier = Modifier.padding(bottom = 12.dp)
+                    CompactSettingRow(
+                        title = stringResource(R.string.settings_auto_rename_title),
+                        subtitle = stringResource(R.string.settings_auto_rename_subtitle),
+                        checked = autoRenameOverrides,
+                        onCheckedChange = onAutoRenameOverridesChange,
+                        icon = Icons.Rounded.EditNote
+                    )
+                    RowDivider()
+
+                    CompactSettingRow(
+                        title = stringResource(R.string.settings_confirm_delete_title),
+                        subtitle = stringResource(R.string.settings_confirm_delete_subtitle),
+                        checked = confirmDeletion,
+                        onCheckedChange = onConfirmDeletionChange,
+                        icon = Icons.Rounded.GppMaybe
+                    )
+                    RowDivider()
+
+                    CompactSettingRow(
+                        title = stringResource(R.string.settings_custom_picker_title),
+                        subtitle = stringResource(R.string.settings_custom_picker_subtitle),
+                        checked = useCustomPicker,
+                        onCheckedChange = onUseCustomPickerChange,
+                        icon = Icons.Rounded.FolderShared
+                    )
+                }
+            }
+
+            // --- 4. ATUALIZAÇÕES & APP ---
+            item {
+                SettingsSection(title = stringResource(R.string.settings_app_label)) {
+                    CompactSettingRow(
+                        title = stringResource(R.string.settings_auto_check_updates_title),
+                        subtitle = stringResource(R.string.settings_auto_check_updates_subtitle),
+                        checked = autoCheckMappingUpdates,
+                        onCheckedChange = onAutoCheckMappingUpdatesChange,
+                        icon = Icons.Rounded.CloudSync
                     )
 
-                    var showPicker by remember { mutableStateOf(false) }
-                    val allPalettes = AccentPalette.entries.filter {
-                        it != AccentPalette.MATERIAL_YOU || Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-                    }
+                    AnimatedVisibility(
+                        visible = !autoCheckMappingUpdates,
+                        enter = slideInVertically { -it } + expandVertically(animationSpec = spring(stiffness = Spring.StiffnessLow)) + fadeIn(),
+                        exit = slideOutVertically { -it } + shrinkVertically(animationSpec = spring(stiffness = Spring.StiffnessLow)) + fadeOut()
+                    ) {
+                        val btnTitle = when {
+                            isUpdatingMapping || isCheckingUpdate -> stringResource(R.string.settings_updating_mapping)
+                            mappingUpdateAvailable -> stringResource(R.string.compare_update_available_btn)
+                            mappingUpToDate -> stringResource(R.string.compare_update_no_updates)
+                            else -> stringResource(R.string.compare_check_updates_btn)
+                        }
 
-                    // Grade de Paletas Fixa (2 linhas estáveis)
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        allPalettes.chunked(3).forEach { rowItems ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                rowItems.forEach { palette ->
-                                    PaletteOptionCard(
-                                        palette = palette,
-                                        isSelected = accentPalette == palette,
-                                        customColor = if (palette == AccentPalette.CUSTOM) customColorHex else null,
-                                        onSelect = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            if (palette == AccentPalette.CUSTOM && accentPalette == AccentPalette.CUSTOM) {
-                                                showPicker = true
-                                            } else {
-                                                onAccentPaletteChange(palette)
-                                            }
-                                        },
-                                        modifier = Modifier.weight(1f)
-                                    )
+                        Column {
+                            RowDivider()
+                            CompactClickableRow(
+                                title = btnTitle,
+                                icon = if (isUpdatingMapping || isCheckingUpdate) Icons.Rounded.Sync else Icons.Rounded.CloudSync,
+                                iconTint = if (mappingUpdateAvailable) accents.amber else accents.teal,
+                                onClick = {
+                                    if (!isUpdatingMapping && !isCheckingUpdate) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        onManualUpdateCheck()
+                                    }
                                 }
-                                // Preencher espaço se a última linha tiver menos de 3 itens
-                                repeat(3 - rowItems.size) {
-                                    Spacer(modifier = Modifier.weight(1f))
-                                }
-                            }
+                            )
                         }
                     }
 
-                    if (showPicker) {
-                        ColorPickerDialog(
-                            initialColor = customColorHex,
-                            onDismiss = { showPicker = false },
-                            onColorSelected = {
-                                onCustomColorChange(it)
-                                showPicker = false
-                            }
+                    RowDivider()
+
+                    CompactSettingRow(
+                        title = stringResource(R.string.settings_auto_check_app_updates_title),
+                        subtitle = stringResource(R.string.settings_auto_check_app_updates_subtitle),
+                        checked = autoCheckAppUpdates,
+                        onCheckedChange = onAutoCheckAppUpdatesChange,
+                        icon = Icons.Rounded.SystemUpdate
+                    )
+
+                    AnimatedVisibility(
+                        visible = !autoCheckAppUpdates,
+                        enter = slideInVertically { -it } + expandVertically(animationSpec = spring(stiffness = Spring.StiffnessLow)) + fadeIn(),
+                        exit = slideOutVertically { -it } + shrinkVertically(animationSpec = spring(stiffness = Spring.StiffnessLow)) + fadeOut()
+                    ) {
+                        val btnTitle = when {
+                            isCheckingAppUpdate -> stringResource(R.string.settings_updating_mapping)
+                            appUpdateAvailable -> stringResource(R.string.settings_app_update_available_btn)
+                            appUpToDate -> stringResource(R.string.settings_app_update_no_updates)
+                            else -> stringResource(R.string.settings_check_app_updates_btn)
+                        }
+
+                        Column {
+                            RowDivider()
+                            CompactClickableRow(
+                                title = btnTitle,
+                                icon = if (isCheckingAppUpdate) Icons.Rounded.Sync else Icons.Rounded.SystemUpdate,
+                                iconTint = if (appUpdateAvailable) accents.amber else accents.teal,
+                                onClick = {
+                                    if (!isCheckingAppUpdate) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        onManualAppUpdateCheck()
+                                    }
+                                }
+                            )
+                        }
+                    }
+
+                    if (isUnlocked) {
+                        RowDivider()
+                        CompactClickableRow(
+                            title = stringResource(R.string.settings_restart_tour_title),
+                            subtitle = stringResource(R.string.settings_restart_tour_subtitle),
+                            icon = Icons.Rounded.RestartAlt,
+                            badgeText = "Debug",
+                            onClick = onRestartTour
                         )
                     }
                 }
             }
 
-            // --- CATEGORIA GERAL ---
+            // --- 5. COMUNIDADE & SOBRE ---
             item {
-                val currentLangLabel = when {
-                    currentLanguage.isEmpty() -> "🌐 " + stringResource(R.string.settings_lang_system) + " (${LocaleUtils.getSystemLanguageName(context)})"
-                    currentLanguage.startsWith("pt") -> "🇧🇷 " + stringResource(R.string.settings_lang_pt)
-                    currentLanguage.startsWith("es") -> "🇪🇸 " + stringResource(R.string.settings_lang_es)
-                    else -> "🇺🇸 " + stringResource(R.string.settings_lang_en)
-                }
-
-                ClickableSettingRow(
-                    title = stringResource(R.string.settings_language_label),
-                    subtitle = currentLangLabel,
-                    icon = Icons.Rounded.Language,
-                    onClick = { showLanguageSheet = true }
-                )
-            }
-
-            item {
-                SettingRow(
-                    title = stringResource(R.string.settings_auto_rename_title),
-                    subtitle = stringResource(R.string.settings_auto_rename_subtitle),
-                    checked = autoRenameOverrides,
-                    onCheckedChange = onAutoRenameOverridesChange,
-                    icon = Icons.Rounded.EditNote
-                )
-            }
-
-            item {
-                SettingRow(
-                    title = stringResource(R.string.settings_confirm_delete_title),
-                    subtitle = stringResource(R.string.settings_confirm_delete_subtitle),
-                    checked = confirmDeletion,
-                    onCheckedChange = onConfirmDeletionChange,
-                    icon = Icons.Rounded.GppMaybe
-                )
-            }
-
-            item {
-                SettingRow(
-                    title = stringResource(R.string.settings_custom_picker_title),
-                    subtitle = stringResource(R.string.settings_custom_picker_subtitle),
-                    checked = useCustomPicker,
-                    onCheckedChange = onUseCustomPickerChange,
-                    icon = Icons.Rounded.FolderShared
-                )
-            }
-
-            // --- CATEGORIA QUALIDADE (INSTAGRAM) ---
-            item {
-                Text(
-                    text = stringResource(R.string.settings_quality_label),
-                    fontFamily = MonoFamily,
-                    fontSize = 11.sp,
-                    color = accents.textMuted,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
-                )
-            }
-
-            item {
-                val qualityLabel = when (forceReelQuality) {
-                    360 -> stringResource(R.string.quality_360)
-                    480 -> stringResource(R.string.quality_480)
-                    720 -> stringResource(R.string.quality_720)
-                    1080 -> stringResource(R.string.quality_1080)
-                    Int.MAX_VALUE -> stringResource(R.string.quality_max)
-                    else -> stringResource(R.string.quality_auto)
-                }
-
-                ClickableSettingRow(
-                    title = "${stringResource(R.string.settings_force_reels_quality_title)}: $qualityLabel",
-                    subtitle = stringResource(R.string.settings_force_reels_quality_subtitle),
-                    icon = Icons.Rounded.Movie,
-                    onClick = { showReelQualityDialog = true }
-                )
-            }
-
-            item {
-                SettingRow(
-                    title = stringResource(R.string.settings_high_res_images_title),
-                    subtitle = stringResource(R.string.settings_high_res_images_subtitle),
-                    checked = highResImages,
-                    onCheckedChange = onHighResImagesChange,
-                    icon = Icons.Rounded.Search
-                )
-            }
-
-            item {
-                SettingRow(
-                    title = stringResource(R.string.settings_max_upload_quality_title),
-                    subtitle = stringResource(R.string.settings_max_upload_quality_subtitle),
-                    checked = maxUploadQuality,
-                    onCheckedChange = onMaxUploadQualityChange,
-                    icon = Icons.Rounded.Upload
-                )
-            }
-
-            item {
-                val deviceLabel = when (spoofDevice) {
-                    "s26" -> stringResource(R.string.spoof_device_s26)
-                    "pixel" -> stringResource(R.string.spoof_device_pixel)
-                    else -> stringResource(R.string.spoof_device_off)
-                }
-
-                ClickableSettingRow(
-                    title = "${stringResource(R.string.settings_spoof_device_title)} · $deviceLabel",
-                    subtitle = stringResource(R.string.settings_spoof_device_subtitle),
-                    icon = Icons.Rounded.Movie,
-                    onClick = { showSpoofDeviceDialog = true }
-                )
-            }
-
-            // --- CATEGORIA APP ---
-            item {
-                Text(
-                    text = stringResource(R.string.settings_app_label),
-                    fontFamily = MonoFamily,
-                    fontSize = 11.sp,
-                    color = accents.textMuted,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
-                )
-            }
-
-            item {
-                SettingRow(
-                    title = stringResource(R.string.settings_auto_check_updates_title),
-                    subtitle = stringResource(R.string.settings_auto_check_updates_subtitle),
-                    checked = autoCheckMappingUpdates,
-                    onCheckedChange = onAutoCheckMappingUpdatesChange,
-                    icon = Icons.Rounded.CloudSync
-                )
-
-                AnimatedVisibility(
-                    visible = !autoCheckMappingUpdates,
-                    enter = slideInVertically { -it } + expandVertically(animationSpec = spring(stiffness = Spring.StiffnessLow)) + fadeIn(),
-                    exit = slideOutVertically { -it } + shrinkVertically(animationSpec = spring(stiffness = Spring.StiffnessLow)) + fadeOut()
-                ) {
-                    val btnTitle = when {
-                        isUpdatingMapping || isCheckingUpdate -> stringResource(R.string.settings_updating_mapping)
-                        mappingUpdateAvailable -> stringResource(R.string.compare_update_available_btn)
-                        mappingUpToDate -> stringResource(R.string.compare_update_no_updates)
-                        else -> stringResource(R.string.compare_check_updates_btn)
-                    }
-
-                    ClickableSettingRow(
-                        title = btnTitle,
-                        subtitle = "",
-                        icon = if (isUpdatingMapping || isCheckingUpdate) Icons.Rounded.Sync else Icons.Rounded.CloudSync,
-                        iconColor = if (mappingUpdateAvailable) accents.amber else accents.teal,
+                SettingsSection(title = stringResource(R.string.settings_community_label)) {
+                    CompactClickableRow(
+                        title = stringResource(R.string.settings_telegram_title),
+                        subtitle = stringResource(R.string.settings_telegram_subtitle),
+                        icon = ImageVector.vectorResource(R.drawable.ic_telegram),
                         onClick = {
-                            if (!isUpdatingMapping && !isCheckingUpdate) {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onManualUpdateCheck()
-                            }
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            uriHandler.openUri("https://t.me/instaflowflagss")
                         }
                     )
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                SettingRow(
-                    title = stringResource(R.string.settings_auto_check_app_updates_title),
-                    subtitle = stringResource(R.string.settings_auto_check_app_updates_subtitle),
-                    checked = autoCheckAppUpdates,
-                    onCheckedChange = onAutoCheckAppUpdatesChange,
-                    icon = Icons.Rounded.SystemUpdate
-                )
-
-                AnimatedVisibility(
-                    visible = !autoCheckAppUpdates,
-                    enter = slideInVertically { -it } + expandVertically(animationSpec = spring(stiffness = Spring.StiffnessLow)) + fadeIn(),
-                    exit = slideOutVertically { -it } + shrinkVertically(animationSpec = spring(stiffness = Spring.StiffnessLow)) + fadeOut()
-                ) {
-                    val btnTitle = when {
-                        isCheckingAppUpdate -> stringResource(R.string.settings_updating_mapping)
-                        appUpdateAvailable -> stringResource(R.string.settings_app_update_available_btn)
-                        appUpToDate -> stringResource(R.string.settings_app_update_no_updates)
-                        else -> stringResource(R.string.settings_check_app_updates_btn)
-                    }
-
-                    ClickableSettingRow(
-                        title = btnTitle,
-                        subtitle = "",
-                        icon = if (isCheckingAppUpdate) Icons.Rounded.Sync else Icons.Rounded.SystemUpdate,
-                        iconColor = if (appUpdateAvailable) accents.amber else accents.teal,
+                    RowDivider()
+                    CompactClickableRow(
+                        title = stringResource(R.string.settings_github_title),
+                        subtitle = stringResource(R.string.settings_github_subtitle),
+                        icon = ImageVector.vectorResource(R.drawable.ic_github),
                         onClick = {
-                            if (!isCheckingAppUpdate) {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onManualAppUpdateCheck()
-                            }
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            uriHandler.openUri("https://github.com/ViictorNunes/FlagSync")
                         }
-                    )
-                }
-            }
-
-            // --- CATEGORIA COMUNIDADE ---
-            item {
-                Text(
-                    text = stringResource(R.string.settings_community_label),
-                    fontFamily = MonoFamily,
-                    fontSize = 11.sp,
-                    color = accents.textMuted,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
-                )
-            }
-
-            item {
-                ClickableSettingRow(
-                    title = stringResource(R.string.settings_telegram_title),
-                    subtitle = stringResource(R.string.settings_telegram_subtitle),
-                    icon = ImageVector.vectorResource(R.drawable.ic_telegram),
-                    iconSize = 26.dp,
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        uriHandler.openUri("https://t.me/instaflowflagss")
-                    }
-                )
-            }
-
-            item {
-                ClickableSettingRow(
-                    title = stringResource(R.string.settings_github_title),
-                    subtitle = stringResource(R.string.settings_github_subtitle),
-                    icon = ImageVector.vectorResource(R.drawable.ic_github),
-                    iconSize = 26.dp,
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        uriHandler.openUri("https://github.com/ViictorNunes/FlagSync")
-                    }
-                )
-            }
-
-            if (isUnlocked) {
-                item {
-                    Text(
-                        text = "DEBUG",
-                        fontFamily = MonoFamily,
-                        fontSize = 11.sp,
-                        color = accents.teal,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
-                    )
-
-                    ClickableSettingRow(
-                        title = stringResource(R.string.settings_restart_tour_title),
-                        subtitle = stringResource(R.string.settings_restart_tour_subtitle),
-                        icon = Icons.Rounded.RestartAlt,
-                        onClick = onRestartTour
                     )
                 }
             }
@@ -794,103 +788,103 @@ private fun LanguageItem(
 }
 
 @Composable
-private fun ClickableSettingRow(
+private fun SettingsSection(
     title: String,
-    subtitle: String,
-    icon: ImageVector,
-    iconSize: androidx.compose.ui.unit.Dp = 20.dp,
-    iconColor: Color? = null,
-    onClick: () -> Unit
+    content: @Composable ColumnScope.() -> Unit
 ) {
     val accents = LocalAccentColors.current
-    val haptic = LocalHapticFeedback.current
-    val tint = iconColor ?: accents.teal
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 82.dp) // Maintain consistent row height
-            .padding(horizontal = 20.dp, vertical = 6.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                onClick()
-            }
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(tint.copy(alpha = 0.1f)),
-            contentAlignment = Alignment.Center
+        Text(
+            text = title.uppercase(),
+            fontFamily = MonoFamily,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = accents.teal,
+            letterSpacing = 0.8.sp,
+            modifier = Modifier.padding(start = 6.dp, bottom = 6.dp)
+        )
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+            tonalElevation = 1.dp
         ) {
-            Icon(imageVector = icon, contentDescription = null, tint = tint, modifier = Modifier.size(iconSize))
-        }
-        Column(modifier = Modifier.weight(1f).padding(start = 16.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Normal
-            )
-            if (subtitle.isNotEmpty()) {
-                Text(
-                    text = subtitle,
-                    color = accents.textMuted,
-                    fontSize = 12.sp,
-                    textAlign = TextAlign.Justify,
-                    lineHeight = 16.sp,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+            ) {
+                content()
             }
         }
     }
 }
 
 @Composable
-private fun SettingRow(
+private fun CompactSettingRow(
     title: String,
-    subtitle: String,
+    subtitle: String? = null,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    icon: ImageVector? = null
+    icon: ImageVector? = null,
+    iconTint: Color? = null
 ) {
     val accents = LocalAccentColors.current
     val haptic = LocalHapticFeedback.current
+    val tint = iconTint ?: accents.teal
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 82.dp) // Trava de altura para evitar saltos
-            .padding(horizontal = 20.dp, vertical = 6.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+            .clickable {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onCheckedChange(!checked)
+            }
+            .padding(horizontal = 16.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (icon != null) {
             Box(
                 modifier = Modifier
-                    .padding(end = 16.dp)
-                    .size(32.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(accents.textMuted.copy(alpha = 0.1f)),
+                    .size(34.dp)
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(tint.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(imageVector = icon, contentDescription = null, tint = accents.textMuted, modifier = Modifier.size(18.dp))
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = tint,
+                    modifier = Modifier.size(18.dp)
+                )
             }
+            Spacer(modifier = Modifier.width(12.dp))
         }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, style = MaterialTheme.typography.titleMedium)
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 10.dp)
+        ) {
             Text(
-                text = subtitle,
-                color = accents.textMuted,
-                fontSize = 12.sp,
-                textAlign = TextAlign.Justify,
-                lineHeight = 16.sp,
-                modifier = Modifier.padding(top = 2.dp)
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
+            if (!subtitle.isNullOrEmpty()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = accents.textMuted,
+                    fontSize = 11.sp,
+                    lineHeight = 14.5.sp,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
         }
         val useDarkThumb = accents.teal.luminance() > 0.5f
         Switch(
@@ -918,6 +912,136 @@ private fun SettingRow(
             )
         )
     }
+}
+
+@Composable
+private fun CompactClickableRow(
+    title: String,
+    subtitle: String? = null,
+    icon: ImageVector? = null,
+    iconTint: Color? = null,
+    badgeText: String? = null,
+    onClick: () -> Unit
+) {
+    val accents = LocalAccentColors.current
+    val haptic = LocalHapticFeedback.current
+    val tint = iconTint ?: accents.teal
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onClick()
+            }
+            .padding(horizontal = 16.dp, vertical = 11.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (icon != null) {
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(tint.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = tint,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+        }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 8.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (!subtitle.isNullOrEmpty()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = accents.textMuted,
+                    fontSize = 11.sp,
+                    lineHeight = 14.5.sp,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+        }
+        if (!badgeText.isNullOrEmpty()) {
+            Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = tint.copy(alpha = 0.15f),
+                modifier = Modifier.padding(end = 6.dp)
+            ) {
+                Text(
+                    text = badgeText,
+                    color = tint,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                )
+            }
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+            contentDescription = null,
+            tint = accents.textMuted.copy(alpha = 0.6f),
+            modifier = Modifier.size(18.dp)
+        )
+    }
+}
+
+@Composable
+private fun RowDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(start = 62.dp, end = 16.dp),
+        thickness = 0.5.dp,
+        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
+    )
+}
+
+@Composable
+private fun ClickableSettingRow(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    iconSize: androidx.compose.ui.unit.Dp = 20.dp,
+    iconColor: Color? = null,
+    onClick: () -> Unit
+) {
+    CompactClickableRow(
+        title = title,
+        subtitle = subtitle.ifEmpty { null },
+        icon = icon,
+        iconTint = iconColor,
+        onClick = onClick
+    )
+}
+
+@Composable
+private fun SettingRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    icon: ImageVector? = null
+) {
+    CompactSettingRow(
+        title = title,
+        subtitle = subtitle.ifEmpty { null },
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        icon = icon
+    )
 }
 
 @Composable

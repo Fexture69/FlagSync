@@ -315,4 +315,9 @@
     <string name="spoof_device_s26">Galaxy S26 Ultra</string>
     <string name="spoof_device_pixel">Pixel 11 Pro XL</string>
     <string name="spoof_device_toast">Reinicie o Instagram para aplicar a simulação de dispositivo e flags HDR.</string>
+    <string name="settings_show_hook_status_title">Mostrar status dos hooks no Instagram</string>
+    <string name="settings_show_hook_status_subtitle">Exibe card de confirmação dentro do Instagram ao abrir</string>
+    <string name="settings_dev_options_status_title">Opções de Desenvolvedor do Instagram</string>
+    <string name="settings_dev_options_status_subtitle">Desbloqueado via Xposed. Pressione e segure o ícone Início no Instagram.</string>
+    <string name="settings_dev_options_active">Desbloqueado</string>
 </resources>
